@@ -130,6 +130,7 @@ private:
         CreateLogicalDevice();
         CreateSwapChain();
         CreateImageViews();
+        CreateGraphicsPipeline();
     }
 
     void CreateInstance()
@@ -612,6 +613,11 @@ private:
             }
 
         }
+    }
+
+    void CreateGraphicsPipeline()
+    {
+
     }
 
     void MainLoop()

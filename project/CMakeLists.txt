@@ -9,6 +9,9 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Find Vulkan
 find_package(Vulkan REQUIRED)
 
+# Set the path to glslc (Adjust if Vulkan SDK is installed elsewhere)
+set(GLSLC "C:/VulkanSDK/1.3.296.0/Bin/glslc.exe")
+
 # Fetch used libraries
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
@@ -40,8 +43,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm)
 
 # Copy resources to output folder
 set(RESOURCES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-file(GLOB_RECURSE RESOURCE_FILES
+file(GLOB RESOURCE_FILES
     "${RESOURCES_SOURCE_DIR}/*"
+)
+
+set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders")
+file(GLOB_RECURSE SHADER_FILES
+    "${SHADER_SOURCE_DIR}/*"
 )
 
 set(RESOURCES_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/")
@@ -51,3 +59,34 @@ foreach(RESOURCE ${RESOURCE_FILES})
     COMMAND ${CMAKE_COMMAND} -E copy ${RESOURCE}
     ${RESOURCES_OUT_DIR})
 endforeach(RESOURCE)
+
+set(SHADER_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/shaders/")
+file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
+foreach(RESOURCE ${SHADER_FILES})
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${RESOURCE}
+    ${SHADER_OUT_DIR})
+endforeach(RESOURCE)
+
+foreach(SHADER ${SHADER_FILES})
+    set(SHADER_SOURCE "${SHADER}")
+    get_filename_component(SHADER_NAME ${SHADER} NAME)  # Extract file name
+    get_filename_component(SHADER_EXT ${SHADER} EXT)    # Extract extension (e.g., .vert, .frag)
+
+    # Remove the leading dot from the extension and construct the new file name
+    string(REPLACE "." "" SHADER_EXT_CLEAN ${SHADER_EXT})
+    set(SHADER_BINARY "${SHADER_OUT_DIR}/${SHADER_EXT_CLEAN}.spv")
+
+    add_custom_command(
+        OUTPUT ${SHADER_BINARY}
+        COMMAND ${GLSLC} ${SHADER_SOURCE} -o ${SHADER_BINARY}
+        DEPENDS ${SHADER_SOURCE}
+        COMMENT "Compiling shader: ${SHADER}"
+        VERBATIM
+    )
+
+    list(APPEND SPV_SHADERS ${SHADER_BINARY})
+endforeach()
+
+# Create a custom target to compile shaders
+add_custom_target(Shaders ALL DEPENDS ${SPV_SHADERS})
