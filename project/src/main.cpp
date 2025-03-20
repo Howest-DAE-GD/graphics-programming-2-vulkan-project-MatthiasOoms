@@ -10,6 +10,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include <stdexcept> // runtime_error
 #include <algorithm> // clamp
@@ -940,7 +942,7 @@ private:
 
         if (!file.is_open())
         {
-            throw std::runtime_error("failed to open file!");
+            throw std::runtime_error("failed to open file!" + filename);
         }
 
         size_t fileSize = (size_t)file.tellg();

@@ -38,6 +38,19 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)   # Disable GLFW examples
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)      # Disable GLFW tests
 FetchContent_MakeAvailable(glfw)
 
+# Fetch stb_image
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(stb)
+
+# Add the stb_image.h directory to your include paths
+target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm)
 
