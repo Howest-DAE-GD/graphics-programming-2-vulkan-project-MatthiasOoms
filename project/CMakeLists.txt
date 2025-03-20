@@ -55,9 +55,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm)
 
 # Copy resources to output folder
-set(RESOURCES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-file(GLOB RESOURCE_FILES
-    "${RESOURCES_SOURCE_DIR}/*"
+set(TEXTURES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/textures")
+file(GLOB_RECURSE TEXTURE_FILES
+    "${TEXTURES_SOURCE_DIR}/*"
 )
 
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders")
@@ -65,13 +65,13 @@ file(GLOB_RECURSE SHADER_FILES
     "${SHADER_SOURCE_DIR}/*"
 )
 
-set(RESOURCES_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/")
-file(MAKE_DIRECTORY ${RESOURCES_OUT_DIR})
-foreach(RESOURCE ${RESOURCE_FILES})
+set(TEXTURES_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/textures")
+file(MAKE_DIRECTORY ${TEXTURES_OUT_DIR})
+foreach(TEXTURE ${TEXTURE_FILES})
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${RESOURCE}
-    ${RESOURCES_OUT_DIR})
-endforeach(RESOURCE)
+    COMMAND ${CMAKE_COMMAND} -E copy ${TEXTURE}
+    ${TEXTURES_OUT_DIR})
+endforeach(TEXTURE)
 
 set(SHADER_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/shaders/")
 file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
