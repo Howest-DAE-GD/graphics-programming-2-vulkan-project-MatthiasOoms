@@ -71,9 +71,15 @@ const std::vector<const char*> g_DeviceExtensions =
 
 const std::vector<Vertex> g_Vertices =
 {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> g_Indices =
+{
+    0, 1, 2, 2, 3, 0
 };
 
 #ifdef NDEBUG
@@ -169,6 +175,8 @@ private:
     bool m_FramebufferResized = false;
     VkBuffer m_VertexBuffer;
     VkDeviceMemory m_VertexBufferMemory;
+    VkBuffer m_IndexBuffer;
+    VkDeviceMemory m_IndexBufferMemory;
 
     void InitWindow()
     {
@@ -201,6 +209,7 @@ private:
         CreateFramebuffers();
         CreateCommandPool();
         CreateVertexBuffer();
+        CreateIndexBuffer();
         CreateCommandBuffers();
         CreateSyncObjects();
     }
@@ -966,6 +975,27 @@ private:
         vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
     }
 
+    void CreateIndexBuffer()
+    {
+        VkDeviceSize bufferSize = sizeof(g_Indices[0]) * g_Indices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+        void* data;
+        vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, g_Indices.data(), (size_t)bufferSize);
+        vkUnmapMemory(m_Device, stagingBufferMemory);
+
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
+
+        CopyBuffer(stagingBuffer, m_IndexBuffer, bufferSize);
+
+        vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+        vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
+    }
+
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
     {
         VkCommandBufferAllocateInfo allocInfo{};
@@ -1180,7 +1210,9 @@ private:
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-            vkCmdDraw(commandBuffer, static_cast<uint32_t>(g_Vertices.size()), 1, 0, 0);
+            vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+            
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(g_Indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -1263,6 +1295,9 @@ private:
     void Cleanup()
     {
 		CleanupSwapChain();
+
+        vkDestroyBuffer(m_Device, m_IndexBuffer, nullptr);
+        vkFreeMemory(m_Device, m_IndexBufferMemory, nullptr);
 
         vkDestroyBuffer(m_Device, m_VertexBuffer, nullptr);
         vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
