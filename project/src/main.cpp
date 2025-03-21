@@ -7,13 +7,19 @@
 #include <GLFW/glfw3native.h>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
+#include <unordered_map> // unordered_map
 #include <stdexcept> // runtime_error
 #include <algorithm> // clamp
 #include <optional> // optional
@@ -65,7 +71,25 @@ struct Vertex
 
         return attributeDescriptions;
     }
+
+    bool operator==(const Vertex& other) const
+    {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
 };
+
+namespace std
+{
+    template<> struct hash<Vertex>
+    {
+        size_t operator()(Vertex const& vertex) const
+        {
+            return ((hash<glm::vec3>()(vertex.pos) ^
+                (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.texCoord) << 1);
+        }
+    };
+}
 
 struct QueueFamilyIndices
 {
@@ -95,6 +119,9 @@ struct UniformBufferObject
 const uint32_t g_WIDTH = 800;
 const uint32_t g_HEIGHT = 600;
 
+const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
+const std::string g_TEXTURE_PATH = "resources/textures/viking_room.png";
+
 const int g_MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> g_ValidationLayers = 
@@ -105,25 +132,6 @@ const std::vector<const char*> g_ValidationLayers =
 const std::vector<const char*> g_DeviceExtensions = 
 { 
     VK_KHR_SWAPCHAIN_EXTENSION_NAME 
-};
-
-const std::vector<Vertex> g_Vertices =
-{
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> g_Indices =
-{
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
 };
 
 #ifdef NDEBUG
@@ -210,6 +218,9 @@ private:
 
     bool m_FramebufferResized = false;
 
+    std::vector<Vertex> m_Vertices;
+    std::vector<uint32_t> m_Indices;
+
     VkBuffer m_VertexBuffer;
     VkDeviceMemory m_VertexBufferMemory;
 
@@ -267,6 +278,7 @@ private:
         CreateTextureImage();
 		CreateTextureImageView();
         CreateTextureSampler();
+        LoadModel();
         CreateVertexBuffer();
         CreateIndexBuffer();
         CreateUniformBuffers();
@@ -1096,7 +1108,7 @@ private:
     void CreateTextureImage()
     {
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("resources/textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load(g_TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels)
@@ -1107,7 +1119,7 @@ private:
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-        
+
         void* data;
         vkMapMemory(m_Device, stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
@@ -1116,10 +1128,9 @@ private:
         stbi_image_free(pixels);
 
         CreateImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
-        
+
         TransitionImageLayout(m_TextureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         CopyBufferToImage(stagingBuffer, m_TextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-
         TransitionImageLayout(m_TextureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
@@ -1218,9 +1229,53 @@ private:
         }
     }
 
+    void LoadModel()
+    {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, g_MODEL_PATH.c_str()))
+        {
+            throw std::runtime_error(err);
+        }
+
+        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+        for (const auto& shape : shapes)
+        {
+            for (const auto& index : shape.mesh.indices)
+            {
+                Vertex vertex{};
+
+                vertex.pos = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                };
+
+                vertex.texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+
+                vertex.color = { 1.0f, 1.0f, 1.0f };
+
+                if (uniqueVertices.count(vertex) == 0)
+                {
+                    uniqueVertices[vertex] = static_cast<uint32_t>(m_Vertices.size());
+                    m_Vertices.push_back(vertex);
+                }
+
+                m_Indices.push_back(uniqueVertices[vertex]);
+            }
+        }
+    }
+
     void CreateVertexBuffer()
     {
-        VkDeviceSize bufferSize = sizeof(g_Vertices[0]) * g_Vertices.size();
+        VkDeviceSize bufferSize = sizeof(m_Vertices[0]) * m_Vertices.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -1228,7 +1283,7 @@ private:
 
         void* data;
         vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, g_Vertices.data(), (size_t)bufferSize);
+        memcpy(data, m_Vertices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_Device, stagingBufferMemory);
 
         CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_VertexBuffer, m_VertexBufferMemory);
@@ -1241,7 +1296,7 @@ private:
 
     void CreateIndexBuffer()
     {
-        VkDeviceSize bufferSize = sizeof(g_Indices[0]) * g_Indices.size();
+        VkDeviceSize bufferSize = sizeof(m_Indices[0]) * m_Indices.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -1249,7 +1304,7 @@ private:
 
         void* data;
         vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, g_Indices.data(), (size_t)bufferSize);
+        memcpy(data, m_Indices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_Device, stagingBufferMemory);
 
         CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
@@ -1684,11 +1739,11 @@ private:
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-            vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
             
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
 
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(g_Indices.size()), 1, 0, 0, 0);
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
 

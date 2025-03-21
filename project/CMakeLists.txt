@@ -16,6 +16,7 @@ set(GLSLC "C:/VulkanSDK/1.3.296.0/Bin/glslc.exe")
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
 
+# Fetch glm
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -26,6 +27,7 @@ FetchContent_Declare(
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE) # Disable GLM tests
 FetchContent_MakeAvailable(glm)
 
+# Fetch glfw
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -48,11 +50,29 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
-# Add the stb_image.h directory to your include paths
+# Fetch tiny_obj_loader
+FetchContent_Declare(
+    tinyobjloader
+    GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
+    GIT_TAG release
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL TRUE
+)
+FetchContent_GetProperties(tinyobjloader)
+if(NOT tinyobjloader_POPULATED)
+    FetchContent_Populate(tinyobjloader)
+    execute_process(COMMAND git sparse-checkout set tiny_obj_loader.h
+                    WORKING_DIRECTORY ${tinyobjloader_SOURCE_DIR})
+    add_library(tinyobjloader INTERFACE)
+    target_include_directories(tinyobjloader INTERFACE ${tinyobjloader_SOURCE_DIR})
+endif()
+
+# Add the stb_image and tiny_object_loader directory to your include paths
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm tinyobjloader)
 
 # Copy resources to output folder
 set(TEXTURES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/textures")
@@ -63,6 +83,11 @@ file(GLOB_RECURSE TEXTURE_FILES
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders")
 file(GLOB_RECURSE SHADER_FILES
     "${SHADER_SOURCE_DIR}/*"
+)
+
+set(MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/models")
+file(GLOB_RECURSE MODEL_FILES
+    "${MODELS_SOURCE_DIR}/*"
 )
 
 set(TEXTURES_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/textures")
@@ -80,6 +105,14 @@ foreach(RESOURCE ${SHADER_FILES})
     COMMAND ${CMAKE_COMMAND} -E copy ${RESOURCE}
     ${SHADER_OUT_DIR})
 endforeach(RESOURCE)
+
+set(MODELS_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources/models")
+file(MAKE_DIRECTORY ${MODELS_OUT_DIR})
+foreach(MODEL ${MODEL_FILES})
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${MODEL}
+    ${MODELS_OUT_DIR})
+endforeach(MODEL)
 
 foreach(SHADER ${SHADER_FILES})
     set(SHADER_SOURCE "${SHADER}")
