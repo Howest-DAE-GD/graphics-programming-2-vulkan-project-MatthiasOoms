@@ -215,7 +215,6 @@ private:
     void InitVulkan()
     {
         CreateInstance();
-        CreateSurface();
         PickPhysicalDevice();
         CreateLogicalDevice();
         CreateSwapChain();
@@ -242,14 +241,7 @@ private:
     void CreateInstance()
     {
 		m_pInstance = new Instance(g_WIDTH, g_HEIGHT, g_ValidationLayers, g_DeviceExtensions, g_EnableValidationLayers);
-    }
-
-    void CreateSurface()
-    {
-        if (glfwCreateWindowSurface(m_pInstance->GetVkInstance(), m_pWindow->GetGLFWWindow(), nullptr, m_pInstance->GetSurface()) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create window surface!");
-        }
+		m_pInstance->CreateSurface(m_pWindow->GetGLFWWindow());
     }
 
     void PickPhysicalDevice()

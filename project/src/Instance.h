@@ -13,6 +13,7 @@ public:
 	VkInstance GetVkInstance() const { return m_Instance; }
 	VkDebugUtilsMessengerEXT GetDebugMessenger() const { return m_DebugMessenger; }
 	VkSurfaceKHR* GetSurface() { return &m_Surface; }
+	void CreateSurface(GLFWwindow* window);
 
 private:
 	VkInstance m_Instance;

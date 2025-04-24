@@ -74,6 +74,14 @@ Instance::~Instance()
 	vkDestroyInstance(m_Instance, nullptr);
 }
 
+void Instance::CreateSurface(GLFWwindow* window)
+{
+    if (glfwCreateWindowSurface(m_Instance, window, nullptr, &m_Surface) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create window surface!");
+    }
+}
+
 std::vector<const char*> Instance::GetRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0;
