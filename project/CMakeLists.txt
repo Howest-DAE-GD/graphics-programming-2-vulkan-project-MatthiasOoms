@@ -1,6 +1,7 @@
 # Source files
 set(SOURCES 
     "src/main.cpp"
+    "src/Window.cpp"
 )
 
 # Create the executable

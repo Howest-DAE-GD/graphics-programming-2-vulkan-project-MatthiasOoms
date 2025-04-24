@@ -1,10 +1,7 @@
 #define NOMINMAX // ::max and ::min are defined in windows.h
 
 #define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
+#include "Window.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
@@ -183,7 +180,7 @@ public:
 
 private:
 	// Member variables
-    GLFWwindow* m_pWindow;
+    Window* m_pWindow;
 
     VkInstance m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -216,8 +213,6 @@ private:
     std::vector<VkFence> m_InFlightFences;
     uint32_t m_CurrentFrame = 0;
 
-    bool m_FramebufferResized = false;
-
     std::vector<Vertex> m_Vertices;
     std::vector<uint32_t> m_Indices;
 
@@ -245,19 +240,7 @@ private:
 
     void InitWindow()
     {
-        glfwInit();
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-        m_pWindow = glfwCreateWindow(g_WIDTH, g_HEIGHT, "Vulkan", nullptr, nullptr);
-        glfwSetWindowUserPointer(m_pWindow, this);
-		glfwSetFramebufferSizeCallback(m_pWindow, FramebufferResizeCallback);
-    }
-
-    static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
-    {
-        auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
-        app->m_FramebufferResized = true;
+		m_pWindow = new Window(g_WIDTH, g_HEIGHT, "Vulkan");
     }
 
     void InitVulkan()
@@ -433,7 +416,7 @@ private:
 
     void CreateSurface()
     {
-        if (glfwCreateWindowSurface(m_Instance, m_pWindow, nullptr, &m_Surface) != VK_SUCCESS)
+        if (glfwCreateWindowSurface(m_Instance, m_pWindow->GetGLFWWindow(), nullptr, &m_Surface) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create window surface!");
         }
@@ -606,7 +589,7 @@ private:
         else 
         {
             int width, height;
-            glfwGetFramebufferSize(m_pWindow, &width, &height);
+            glfwGetFramebufferSize(m_pWindow->GetGLFWWindow(), &width, &height);
 
             VkExtent2D actualExtent = 
             {
@@ -1646,7 +1629,7 @@ private:
         int height = 0;
         while (width == 0 || height == 0)
         {
-            glfwGetFramebufferSize(m_pWindow, &width, &height);
+            glfwGetFramebufferSize(m_pWindow->GetGLFWWindow(), &width, &height);
             glfwWaitEvents();
         }
 
@@ -1681,7 +1664,7 @@ private:
 
     void MainLoop()
     {
-        while (!glfwWindowShouldClose(m_pWindow))
+        while (!glfwWindowShouldClose(m_pWindow->GetGLFWWindow()))
         {
             glfwPollEvents();
             DrawFrame();
@@ -1812,9 +1795,9 @@ private:
 
         result = vkQueuePresentKHR(m_PresentQueue, &presentInfo);
 
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_pWindow->IsFramebufferResized())
         {
-            m_FramebufferResized = false;
+            m_pWindow->ResetFramebufferResized();
             RecreateSwapChain();
         }
         else if (result != VK_SUCCESS)
@@ -1891,9 +1874,7 @@ private:
         vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
         vkDestroyInstance(m_Instance, nullptr);
 
-        glfwDestroyWindow(m_pWindow);
-
-        glfwTerminate();
+        delete m_pWindow;
     }
 };
 
