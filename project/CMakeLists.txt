@@ -2,6 +2,7 @@
 set(SOURCES 
     "src/main.cpp"
     "src/Window.cpp"
+    "src/Instance.cpp"
 )
 
 # Create the executable
