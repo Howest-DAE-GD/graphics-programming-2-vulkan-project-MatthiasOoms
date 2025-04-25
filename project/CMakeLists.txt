@@ -3,7 +3,7 @@ set(SOURCES
     "src/main.cpp"
     "src/Window.cpp"
     "src/Instance.cpp"
-)
+ "src/PhysicalDevice.cpp" "src/Structs.h")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})

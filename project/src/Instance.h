@@ -14,6 +14,7 @@ public:
 	VkDebugUtilsMessengerEXT GetDebugMessenger() const { return m_DebugMessenger; }
 	VkSurfaceKHR* GetSurface() { return &m_Surface; }
 	void CreateSurface(GLFWwindow* window);
+	std::vector<const char*> GetDeviceExtensions() const { return m_DeviceExtensions; }
 
 private:
 	VkInstance m_Instance;

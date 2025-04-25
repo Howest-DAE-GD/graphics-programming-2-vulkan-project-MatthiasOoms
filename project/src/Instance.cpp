@@ -49,6 +49,8 @@ Instance::Instance(int width, int height, std::vector<const char*> validationLay
         throw std::runtime_error("failed to create instance!");
     }
 
+    SetupDebugMessenger();
+
 #ifndef NDEBUG // If in debug mode, print available extensions
     uint32_t availableExtensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
