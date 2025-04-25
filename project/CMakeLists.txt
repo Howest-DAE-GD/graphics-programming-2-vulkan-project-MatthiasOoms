@@ -5,7 +5,9 @@ set(SOURCES
     "src/Instance.cpp"
     "src/PhysicalDevice.cpp"
     "src/Structs.h"
-    "src/LogicalDevice.cpp")
+    "src/LogicalDevice.cpp" 
+    "src/Swapchain.cpp"
+)
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})

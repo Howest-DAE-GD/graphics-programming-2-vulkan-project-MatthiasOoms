@@ -7,6 +7,7 @@
 
 LogicalDevice::LogicalDevice(PhysicalDevice* pPhysicalDevice, Instance* pInstance)
 	: m_pPhysicalDevice{ pPhysicalDevice }
+    , m_Device { VK_NULL_HANDLE }
 {
     QueueFamilyIndices indices = m_pPhysicalDevice->FindQueueFamilies();
 
@@ -39,9 +40,10 @@ LogicalDevice::LogicalDevice(PhysicalDevice* pPhysicalDevice, Instance* pInstanc
     createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
+	std::vector<const char*> validationLayers;
     if (pInstance->IsEnableValidationLayers())
     {
-		auto validationLayers = pInstance->GetValidationLayers();
+        validationLayers = pInstance->GetValidationLayers();
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
     }
@@ -50,7 +52,8 @@ LogicalDevice::LogicalDevice(PhysicalDevice* pPhysicalDevice, Instance* pInstanc
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(m_pPhysicalDevice->GetVkPhysicalDevice(), &createInfo, nullptr, &m_Device) != VK_SUCCESS)
+    auto temp = m_pPhysicalDevice->GetVkPhysicalDevice();
+    if (vkCreateDevice(temp, &createInfo, nullptr, &m_Device) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create logical device!");
     }
