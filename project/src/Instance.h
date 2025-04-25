@@ -15,6 +15,8 @@ public:
 	VkSurfaceKHR* GetSurface() { return &m_Surface; }
 	void CreateSurface(GLFWwindow* window);
 	std::vector<const char*> GetDeviceExtensions() const { return m_DeviceExtensions; }
+	std::vector<const char*> GetValidationLayers() const { return m_ValidationLayers; }
+	bool IsEnableValidationLayers() const { return m_EnableValidationLayers; }
 
 private:
 	VkInstance m_Instance;
