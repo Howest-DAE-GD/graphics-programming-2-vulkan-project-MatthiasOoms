@@ -1,7 +1,6 @@
 #include "GraphicsPipeline.h"
 #include "LogicalDevice.h"
 #include "Structs.h"
-#include <tiny_obj_loader.h>
 #include <stdexcept>
 #include <vector>
 #include <fstream>
