@@ -12,6 +12,7 @@
 #include "PipelineLayout.h"
 #include "GraphicsPipeline.h"
 #include "CommandPool.h"
+#include "CommandBuffers.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -105,7 +106,7 @@ private:
 
 	CommandPool* m_pCommandPool;
 
-    std::vector<VkCommandBuffer> m_CommandBuffers;
+	CommandBuffers* m_pCommandBuffers;
 
     std::vector<VkSemaphore> m_ImageAvailableSemaphores;
     std::vector<VkSemaphore> m_RenderFinishedSemaphores;
@@ -760,18 +761,7 @@ private:
 
     void CreateCommandBuffers()
     {
-        m_CommandBuffers.resize(g_MAX_FRAMES_IN_FLIGHT);
-
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = m_pCommandPool->GetCommandPool();
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)m_CommandBuffers.size();
-
-        if (vkAllocateCommandBuffers(m_pDevice->GetVkDevice(), &allocInfo, m_CommandBuffers.data()) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to allocate command buffers!");
-        }
+        m_pCommandBuffers = new CommandBuffers(m_pDevice, m_pCommandPool, g_MAX_FRAMES_IN_FLIGHT);
     }
 
     void CreateSyncObjects()
@@ -919,8 +909,8 @@ private:
 
         vkResetFences(m_pDevice->GetVkDevice(), 1, &m_InFlightFences[m_CurrentFrame]);
 
-        vkResetCommandBuffer(m_CommandBuffers[m_CurrentFrame], 0);
-		RecordCommandBuffer(m_CommandBuffers[m_CurrentFrame], imageIndex);
+        vkResetCommandBuffer(m_pCommandBuffers->GetCommandBuffers()[m_CurrentFrame], 0);
+		RecordCommandBuffer(m_pCommandBuffers->GetCommandBuffers()[m_CurrentFrame], imageIndex);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -932,7 +922,7 @@ private:
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &m_CommandBuffers[m_CurrentFrame];
+        submitInfo.pCommandBuffers = &m_pCommandBuffers->GetCommandBuffers()[m_CurrentFrame];
 
         VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphores[m_CurrentFrame] };
         submitInfo.signalSemaphoreCount = 1;
