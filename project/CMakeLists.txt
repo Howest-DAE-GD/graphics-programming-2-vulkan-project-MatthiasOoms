@@ -7,7 +7,10 @@ set(SOURCES
     "src/Structs.h"
     "src/LogicalDevice.cpp" 
     "src/Swapchain.cpp"
- "src/RenderPass.cpp" "src/DescriptorSetLayout.cpp" "src/PipelineLayout.cpp")
+    "src/RenderPass.cpp"
+    "src/DescriptorSetLayout.cpp"
+    "src/PipelineLayout.cpp"
+    "src/GraphicsPipeline.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})

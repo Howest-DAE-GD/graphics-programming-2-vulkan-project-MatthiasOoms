@@ -8,7 +8,7 @@ class DescriptorSetLayout
 public:
 	DescriptorSetLayout(LogicalDevice* pDevice);
 	~DescriptorSetLayout();
-	const VkDescriptorSetLayout* GetDescriptorSetLayout() const { return &m_DescriptorSetLayout; }
+	VkDescriptorSetLayout* GetDescriptorSetLayout() { return &m_DescriptorSetLayout; }
 
 private:
 	VkDescriptorSetLayout m_DescriptorSetLayout;
