@@ -10,7 +10,7 @@ set(SOURCES
     "src/RenderPass.cpp"
     "src/DescriptorSetLayout.cpp"
     "src/PipelineLayout.cpp"
-    "src/GraphicsPipeline.cpp")
+    "src/GraphicsPipeline.cpp" "src/CommandPool.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})

@@ -11,6 +11,7 @@
 #include "DescriptorSetLayout.h"
 #include "PipelineLayout.h"
 #include "GraphicsPipeline.h"
+#include "CommandPool.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -102,7 +103,7 @@ private:
 	DescriptorSetLayout* m_pDescriptorSetLayout;
 	GraphicsPipeline* m_pGraphicsPipeline;
 
-    VkCommandPool m_CommandPool;
+	CommandPool* m_pCommandPool;
 
     std::vector<VkCommandBuffer> m_CommandBuffers;
 
@@ -210,17 +211,7 @@ private:
 
     void CreateCommandPool()
     {
-        QueueFamilyIndices queueFamilyIndices = m_pPhysicalDevice->FindQueueFamilies();
-
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-        if (vkCreateCommandPool(m_pDevice->GetVkDevice(), &poolInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create command pool!");
-        }
+		m_pCommandPool = new CommandPool(m_pDevice);
     }
 
     void CreateDepthResources()
@@ -544,7 +535,7 @@ private:
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = m_CommandPool;
+        allocInfo.commandPool = m_pCommandPool->GetCommandPool();
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
@@ -571,7 +562,7 @@ private:
         vkQueueSubmit(m_pDevice->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(m_pDevice->GetGraphicsQueue());
 
-        vkFreeCommandBuffers(m_pDevice->GetVkDevice(), m_CommandPool, 1, &commandBuffer);
+        vkFreeCommandBuffers(m_pDevice->GetVkDevice(), m_pCommandPool->GetCommandPool(), 1, &commandBuffer);
     }
 
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -773,7 +764,7 @@ private:
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = m_CommandPool;
+        allocInfo.commandPool = m_pCommandPool->GetCommandPool();
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t)m_CommandBuffers.size();
 
@@ -1034,7 +1025,7 @@ private:
             vkDestroyFence(m_pDevice->GetVkDevice(), m_InFlightFences[i], nullptr);
         }
 
-        vkDestroyCommandPool(m_pDevice->GetVkDevice(), m_CommandPool, nullptr);
+        delete m_pCommandPool;
 
         delete m_pDevice;
 

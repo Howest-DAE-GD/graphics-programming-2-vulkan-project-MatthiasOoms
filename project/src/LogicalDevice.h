@@ -13,6 +13,8 @@ public:
 	VkDevice GetVkDevice() const { return m_Device; }
 	VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
 	VkQueue GetPresentQueue() const { return m_PresentQueue; }
+	PhysicalDevice* GetPhysicalDevice() { return m_pPhysicalDevice; }
+
 private:
 	VkDevice m_Device;
 	PhysicalDevice* m_pPhysicalDevice;
