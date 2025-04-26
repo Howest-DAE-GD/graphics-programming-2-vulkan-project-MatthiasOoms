@@ -9,6 +9,7 @@
 #include "Swapchain.h"
 #include "RenderPass.h"
 #include "DescriptorSetLayout.h"
+#include "PipelineLayout.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
@@ -150,7 +151,7 @@ private:
 
     RenderPass* m_pRenderPass;
 	DescriptorSetLayout* m_pDescriptorSetLayout;
-    VkPipelineLayout m_PipelineLayout;
+    PipelineLayout* m_pPipelineLayout;
     VkPipeline m_GraphicsPipeline;
 
     VkCommandPool m_CommandPool;
@@ -366,17 +367,8 @@ private:
         colorBlending.blendConstants[2] = 0.0f; // Optional
         colorBlending.blendConstants[3] = 0.0f; // Optional
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1; // Optional
-        pipelineLayoutInfo.pSetLayouts = m_pDescriptorSetLayout->GetDescriptorSetLayout(); // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-        if (vkCreatePipelineLayout(m_pDevice->GetVkDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
+		m_pPipelineLayout = new PipelineLayout(m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout());
+		auto pipelineLayout = m_pPipelineLayout->GetPipelineLayout();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -390,7 +382,7 @@ private:
         pipelineInfo.pDepthStencilState = &depthStencil;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
-        pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.layout = m_pPipelineLayout->GetPipelineLayout();
         pipelineInfo.renderPass = m_pRenderPass->GetRenderPass();
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -1127,7 +1119,7 @@ private:
 
             vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
             
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pPipelineLayout->GetPipelineLayout(), 0, 1, &m_DescriptorSets[m_CurrentFrame], 0, nullptr);
 
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 
@@ -1256,7 +1248,7 @@ private:
         vkFreeMemory(m_pDevice->GetVkDevice(), m_VertexBufferMemory, nullptr);
 
         vkDestroyPipeline(m_pDevice->GetVkDevice(), m_GraphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(m_pDevice->GetVkDevice(), m_PipelineLayout, nullptr);
+        delete m_pPipelineLayout;
 
 		delete m_pRenderPass;
 
