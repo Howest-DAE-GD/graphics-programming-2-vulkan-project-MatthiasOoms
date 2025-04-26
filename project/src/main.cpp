@@ -8,6 +8,7 @@
 #include "LogicalDevice.h"
 #include "Swapchain.h"
 #include "RenderPass.h"
+#include "DescriptorSetLayout.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
@@ -148,7 +149,7 @@ private:
 	Swapchain* m_pSwapchain;
 
     RenderPass* m_pRenderPass;
-    VkDescriptorSetLayout m_DescriptorSetLayout;
+	DescriptorSetLayout* m_pDescriptorSetLayout;
     VkPipelineLayout m_PipelineLayout;
     VkPipeline m_GraphicsPipeline;
 
@@ -203,7 +204,7 @@ private:
         CreateGraphicsPipeline();
         CreateCommandPool();
         CreateDepthResources();
-        m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), m_DepthImageView);
+        CreateFrameBuffers();
         CreateTextureImage();
 		CreateTextureImageView();
         CreateTextureSampler();
@@ -250,30 +251,7 @@ private:
 
     void CreateDescriptorSetLayout()
     {
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(m_pDevice->GetVkDevice(), &layoutInfo, nullptr, &m_DescriptorSetLayout) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
+		m_pDescriptorSetLayout = new DescriptorSetLayout(m_pDevice);
     }
 
     void CreateGraphicsPipeline()
@@ -391,7 +369,7 @@ private:
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1; // Optional
-        pipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout; // Optional
+        pipelineLayoutInfo.pSetLayouts = m_pDescriptorSetLayout->GetDescriptorSetLayout(); // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -520,6 +498,11 @@ private:
     {
         return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
     }
+
+	void CreateFrameBuffers()
+	{
+        m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), m_DepthImageView);
+	}
 
     void CreateTextureImage()
     {
@@ -970,7 +953,7 @@ private:
 
     void CreateDescriptorSets()
     {
-        std::vector<VkDescriptorSetLayout> layouts(g_MAX_FRAMES_IN_FLIGHT, m_DescriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(g_MAX_FRAMES_IN_FLIGHT, *m_pDescriptorSetLayout->GetDescriptorSetLayout());
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = m_DescriptorPool;
@@ -1264,7 +1247,7 @@ private:
 
         vkDestroyDescriptorPool(m_pDevice->GetVkDevice(), m_DescriptorPool, nullptr);
 
-        vkDestroyDescriptorSetLayout(m_pDevice->GetVkDevice(), m_DescriptorSetLayout, nullptr);
+        delete m_pDescriptorSetLayout;
 
         vkDestroyBuffer(m_pDevice->GetVkDevice(), m_IndexBuffer, nullptr);
         vkFreeMemory(m_pDevice->GetVkDevice(), m_IndexBufferMemory, nullptr);
@@ -1275,7 +1258,7 @@ private:
         vkDestroyPipeline(m_pDevice->GetVkDevice(), m_GraphicsPipeline, nullptr);
         vkDestroyPipelineLayout(m_pDevice->GetVkDevice(), m_PipelineLayout, nullptr);
 
-        vkDestroyRenderPass(m_pDevice->GetVkDevice(), m_pRenderPass->GetRenderPass(), nullptr);
+		delete m_pRenderPass;
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {

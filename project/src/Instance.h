@@ -12,7 +12,7 @@ public:
 	~Instance();
 	VkInstance GetVkInstance() const { return m_Instance; }
 	VkDebugUtilsMessengerEXT GetDebugMessenger() const { return m_DebugMessenger; }
-	VkSurfaceKHR* GetSurface() { return &m_Surface; }
+	const VkSurfaceKHR* GetSurface() const { return &m_Surface; }
 	void CreateSurface(GLFWwindow* window);
 	std::vector<const char*> GetDeviceExtensions() const { return m_DeviceExtensions; }
 	std::vector<const char*> GetValidationLayers() const { return m_ValidationLayers; }
