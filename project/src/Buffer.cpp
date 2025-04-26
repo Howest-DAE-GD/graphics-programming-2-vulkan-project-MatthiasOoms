@@ -57,6 +57,20 @@ Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlag
 	vkFreeMemory(m_pDevice->GetVkDevice(), stagingBufferMemory, nullptr);
 }
 
+Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, LogicalDevice* pDevice, CommandPool* pCommandPool, void** uniformBufferMapped)
+	: m_Size(size)
+	, m_Usage(usage)
+	, m_Properties(properties)
+	, m_Buffer(VK_NULL_HANDLE)
+	, m_Memory(VK_NULL_HANDLE)
+	, m_pDevice(pDevice)
+	, m_pCommandPool(pCommandPool)
+{
+	Buffer::CreateBuffer(m_pDevice, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Buffer, m_Memory);
+
+	vkMapMemory(m_pDevice->GetVkDevice(), m_Memory, 0, size, 0, uniformBufferMapped);
+}
+
 Buffer::~Buffer()
 {
 	if (m_Buffer != VK_NULL_HANDLE)

@@ -11,9 +11,10 @@ class Buffer
 public:
 	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const uint32_t* data, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel);
 	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const Vertex* data, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel);
+	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, LogicalDevice* pDevice, CommandPool* pCommandPool, void** uniformBufferMapped);
 	~Buffer();
-	VkBuffer GetBuffer() { return m_Buffer; }
-	VkDeviceMemory GetMemory() { return m_Memory; }
+	VkBuffer& GetBuffer() { return m_Buffer; }
+	VkDeviceMemory& GetMemory() { return m_Memory; }
 	void CopyBuffer(VkBuffer srcBuffer, VkDeviceSize size);
 
 	static void CreateBuffer(LogicalDevice* pDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);

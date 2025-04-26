@@ -107,8 +107,7 @@ private:
 	Buffer* m_pVertexBuffer;
 	Buffer* m_pIndexBuffer;
 
-    std::vector<VkBuffer> m_UniformBuffers;
-    std::vector<VkDeviceMemory> m_UniformBuffersMemory;
+    std::vector<Buffer*> m_UniformBuffers;
     std::vector<void*> m_UniformBuffersMapped;
 
     VkDescriptorPool m_DescriptorPool;
@@ -508,14 +507,11 @@ private:
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
         m_UniformBuffers.resize(g_MAX_FRAMES_IN_FLIGHT);
-        m_UniformBuffersMemory.resize(g_MAX_FRAMES_IN_FLIGHT);
         m_UniformBuffersMapped.resize(g_MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            Buffer::CreateBuffer(m_pDevice, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_UniformBuffers[i], m_UniformBuffersMemory[i]);
-
-            vkMapMemory(m_pDevice->GetVkDevice(), m_UniformBuffersMemory[i], 0, bufferSize, 0, &m_UniformBuffersMapped[i]);
+			m_UniformBuffers[i] = new Buffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_pDevice, m_pCommandPool, &m_UniformBuffersMapped[i]);
         }
     }
 
@@ -557,7 +553,7 @@ private:
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = m_UniformBuffers[i];
+            bufferInfo.buffer = m_UniformBuffers[i]->GetBuffer();
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -820,19 +816,15 @@ private:
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            vkDestroyBuffer(m_pDevice->GetVkDevice(), m_UniformBuffers[i], nullptr);
-            vkFreeMemory(m_pDevice->GetVkDevice(), m_UniformBuffersMemory[i], nullptr);
+			delete m_UniformBuffers[i];
         }
 
         vkDestroyDescriptorPool(m_pDevice->GetVkDevice(), m_DescriptorPool, nullptr);
 
         delete m_pDescriptorSetLayout;
 
-        vkDestroyBuffer(m_pDevice->GetVkDevice(), m_pIndexBuffer->GetBuffer(), nullptr);
-        vkFreeMemory(m_pDevice->GetVkDevice(), m_pIndexBuffer->GetMemory(), nullptr);
-
-        vkDestroyBuffer(m_pDevice->GetVkDevice(), m_pVertexBuffer->GetBuffer(), nullptr);
-        vkFreeMemory(m_pDevice->GetVkDevice(), m_pVertexBuffer->GetMemory(), nullptr);
+        delete m_pIndexBuffer;
+		delete m_pVertexBuffer;
 
 		delete m_pGraphicsPipeline;
 
