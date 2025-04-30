@@ -16,7 +16,9 @@ set(SOURCES
     "src/Model.cpp" 
     "src/Buffer.cpp" 
     "src/DescriptorPool.cpp" 
-    "src/DescriptorSets.cpp" "src/Image.cpp" "src/Texture.cpp")
+    "src/DescriptorSets.cpp" 
+    "src/Image.cpp" 
+    "src/Texture.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})
