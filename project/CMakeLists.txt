@@ -10,7 +10,13 @@ set(SOURCES
     "src/RenderPass.cpp"
     "src/DescriptorSetLayout.cpp"
     "src/PipelineLayout.cpp"
-    "src/GraphicsPipeline.cpp" "src/CommandPool.cpp" "src/CommandBuffers.cpp" "src/Model.cpp" "src/Buffer.cpp" "src/DescriptorPool.cpp")
+    "src/GraphicsPipeline.cpp" 
+    "src/CommandPool.cpp" 
+    "src/CommandBuffers.cpp" 
+    "src/Model.cpp" 
+    "src/Buffer.cpp" 
+    "src/DescriptorPool.cpp" 
+    "src/DescriptorSets.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})

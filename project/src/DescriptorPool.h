@@ -8,7 +8,7 @@ class DescriptorPool
 public:
 	DescriptorPool(int maxFramesInFlight, LogicalDevice* pDevice);
 	~DescriptorPool();
-	VkDescriptorPool GetDescriptorPool() const { return m_DescriptorPool; }
+	VkDescriptorPool* GetDescriptorPool() { return &m_DescriptorPool; }
 
 private:
 	VkDescriptorPool m_DescriptorPool;
