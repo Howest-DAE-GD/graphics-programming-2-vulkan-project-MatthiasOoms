@@ -5,13 +5,14 @@
 class LogicalDevice;
 class PhysicalDevice;
 class Instance;
+class Image;
 
 class Swapchain
 {
 public:
 	Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, Instance* pInstance);
 	~Swapchain();
-	void CleanupSwapChain(VkImageView depthImageView, VkImage depthImage, VkDeviceMemory depthImageMemory);
+	void CleanupSwapChain(Image* pImage);
 
 	void CreateImageViews();
 	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);

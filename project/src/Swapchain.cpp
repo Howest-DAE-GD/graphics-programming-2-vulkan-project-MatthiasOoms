@@ -2,6 +2,7 @@
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
 #include "Instance.h"
+#include "Image.h"
 #include <stdexcept>
 #include <array>
 
@@ -79,12 +80,12 @@ Swapchain::~Swapchain()
 {
 }
 
-void Swapchain::CleanupSwapChain(VkImageView depthImageView, VkImage depthImage, VkDeviceMemory depthImageMemory)
+void Swapchain::CleanupSwapChain(Image* pImage)
 {
     VkDevice device = m_pDevice->GetVkDevice();
-    vkDestroyImageView(device, depthImageView, nullptr);
-    vkDestroyImage(device, depthImage, nullptr);
-    vkFreeMemory(device, depthImageMemory, nullptr);
+    vkDestroyImageView(device, *pImage->GetImageView(), nullptr);
+    vkDestroyImage(device, *pImage->GetImage(), nullptr);
+    vkFreeMemory(device, *pImage->GetImageMemory(), nullptr);
 
     for (size_t i{}; i < m_SwapchainFramebuffers.size(); ++i)
     {
