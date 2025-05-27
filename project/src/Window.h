@@ -19,6 +19,10 @@ public:
 	GLFWwindow* GetGLFWWindow() const { return m_pWindow; }
 	bool IsFramebufferResized() const { return m_FramebufferResized; }
 	void ResetFramebufferResized() { m_FramebufferResized = false; }
+	float GetAspectRatio() const
+	{
+		return static_cast<float>(m_Width) / static_cast<float>(m_Height);
+	}
 
 private:
 	GLFWwindow* m_pWindow;

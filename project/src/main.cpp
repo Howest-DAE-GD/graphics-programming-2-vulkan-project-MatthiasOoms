@@ -19,6 +19,8 @@
 #include "DescriptorSets.h"
 #include "Image.h"
 #include "Texture.h"
+#include "Camera.h"
+#include "Timer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -70,6 +72,7 @@ public:
     void Run()
     {
         InitWindow();
+        InitCamera();
         InitVulkan();
         MainLoop();
         Cleanup();
@@ -101,6 +104,9 @@ private:
 
 	Model* m_pModel;
 
+    Camera* m_pCamera;
+    Timer m_Timer;
+
 	Buffer* m_pVertexBuffer;
 	Buffer* m_pIndexBuffer;
 
@@ -117,6 +123,12 @@ private:
     void InitWindow()
     {
 		m_pWindow = new Window(g_WIDTH, g_HEIGHT, "Vulkan");
+    }
+
+    void InitCamera()
+    {
+		m_pCamera = new Camera();
+        m_pCamera->Initialize(m_pWindow, 90.f, { 0, 0, 0 });
     }
 
     void InitVulkan()
@@ -345,11 +357,15 @@ private:
 
     void MainLoop()
     {
+		m_Timer.Start();
         while (!glfwWindowShouldClose(m_pWindow->GetGLFWWindow()))
         {
             glfwPollEvents();
             DrawFrame();
+            m_Timer.Update();
+			m_pCamera->Update(m_Timer.GetElapsed());
         }
+		m_Timer.Stop();
 
         vkDeviceWaitIdle(m_pDevice->GetVkDevice());
     }
@@ -498,8 +514,9 @@ private:
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
         UniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.model = glm::mat4(1.0f);
+        //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view = glm::lookAt(m_pCamera->GetOrigin(), m_pCamera->GetOrigin() + m_pCamera->forward, m_pCamera->up);
 		auto swapchainExtent = m_pSwapchain->GetSwapchainExtent();
         ubo.proj = glm::perspective(glm::radians(45.0f), swapchainExtent.width / (float)swapchainExtent.height, 0.1f, 10.0f);
         ubo.proj[1][1] *= -1;

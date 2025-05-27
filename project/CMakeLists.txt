@@ -18,7 +18,9 @@ set(SOURCES
     "src/DescriptorPool.cpp" 
     "src/DescriptorSets.cpp" 
     "src/Image.cpp" 
-    "src/Texture.cpp")
+    "src/Texture.cpp"
+    "src/Camera.h"
+    "src/Matrix.cpp" "src/Timer.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES})
