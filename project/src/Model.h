@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include "tiny_gltf.h"
+
 class Model
 {
 public:
@@ -15,6 +17,13 @@ public:
 	const std::vector<uint32_t> GetIndices() const { return m_Indices; }
 
 private:
+	void FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive);
+	void FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive);
+	void FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path);
+
+	std::string GetFolderPath(const std::string& filename);
+
 	std::vector<Vertex> m_Vertices;
 	std::vector<uint32_t> m_Indices;
+	std::vector<std::string> m_DiffuseTextures;
 };

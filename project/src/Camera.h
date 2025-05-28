@@ -73,6 +73,16 @@ public:
 		fovAngle = _fovAngle;
 		fov = tanf((fovAngle * TO_RADIANS) / 2.f);
 
+		// Clamp pitch
+		totalPitch = glm::clamp(totalPitch, -180.f, 0.f);
+
+		// Create rotation matrix
+		Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
+
+		forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
+		right = Matrix::Normalize(rot.TransformVector(glm::vec3{ 1, 0, 0 }));
+		up = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 1, 0 }));
+
 		origin = _origin;
 		CalculateProjectionMatrix();
 	}

@@ -39,6 +39,7 @@
 const uint32_t g_WIDTH = 800;
 const uint32_t g_HEIGHT = 600;
 
+//const std::string g_MODEL_PATH = "resources/models/Sponza.gltf";
 const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
 const std::string g_TEXTURE_PATH = "resources/textures/viking_room.png";
 
