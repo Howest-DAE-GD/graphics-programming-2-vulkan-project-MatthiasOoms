@@ -31,7 +31,7 @@ public:
 	glm::vec3 up{ glm::vec3{ 0, 1, 0 } };
 	glm::vec3 right{ glm::vec3{ 1, 0, 0 } };
 
-	float totalPitch{ -90.f };
+	float totalPitch{};
 	float totalYaw{};
 
 	const float baseSpeed{ 3.f };
@@ -66,7 +66,7 @@ public:
 
 	glm::vec3 GetOrigin() const { return origin; }
 
-	void Initialize(Window* _window, float _fovAngle = 90.f, glm::vec3 _origin = { 0.f,0.f,0.f })
+	void Initialize(Window* _window, float _fovAngle = 90.f, glm::vec3 _origin = { 0.f, 0.f, 0.f })
 	{
 		window = _window->GetGLFWWindow();
 		aspectRatio = _window->GetAspectRatio();
@@ -74,14 +74,14 @@ public:
 		fov = tanf((fovAngle * TO_RADIANS) / 2.f);
 
 		// Clamp pitch
-		totalPitch = glm::clamp(totalPitch, -180.f, 0.f);
+		totalPitch = glm::clamp(totalPitch, -89.f, 89.f);
 
 		// Create rotation matrix
-		Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
+		Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationY(totalYaw * TO_RADIANS);
 
 		forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
-		right = Matrix::Normalize(rot.TransformVector(glm::vec3{ 1, 0, 0 }));
-		up = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 1, 0 }));
+		right = Matrix::Normalize(glm::cross(forward, glm::vec3{ 0, 1, 0 }));
+		up = Matrix::Normalize(glm::cross(right, forward));
 
 		origin = _origin;
 		CalculateProjectionMatrix();
@@ -172,14 +172,14 @@ public:
 				totalPitch += deltaY * rotSpeed;
 
 				// Clamp pitch
-				totalPitch = glm::clamp(totalPitch, -180.f, 0.f);
+				totalPitch = glm::clamp(totalPitch, -89.f, 89.f);
 
 				// Create rotation matrix
-				Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
+				Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationY(-totalYaw * TO_RADIANS);
 
 				forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
-				right = Matrix::Normalize(rot.TransformVector(glm::vec3{ 1, 0, 0 }));
-				up = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 1, 0 }));
+				right = Matrix::Normalize(glm::cross(forward, glm::vec3{ 0, 1, 0 }));
+				up = Matrix::Normalize(glm::cross(right, forward));
 			}
 			else
 			{
@@ -195,7 +195,7 @@ public:
 
 			totalYaw += deltaX * rotSpeed;
 
-			Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
+			Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationY(-totalYaw * TO_RADIANS);
 
 			forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
 			right = Matrix::Normalize(rot.TransformVector(glm::vec3{ 1, 0, 0 }));
