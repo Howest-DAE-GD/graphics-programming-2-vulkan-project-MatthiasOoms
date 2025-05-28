@@ -40,7 +40,8 @@ const uint32_t g_WIDTH = 800;
 const uint32_t g_HEIGHT = 600;
 
 //const std::string g_MODEL_PATH = "resources/models/Sponza.gltf";
-const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
+const std::string g_MODEL_PATH = "resources/models/Box.gltf";
+//const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
 const std::string g_TEXTURE_PATH = "resources/textures/viking_room.png";
 
 const int g_MAX_FRAMES_IN_FLIGHT = 2;
@@ -123,7 +124,7 @@ private:
     void InitCamera()
     {
 		m_pCamera = new Camera();
-        m_pCamera->Initialize(m_pWindow, 90.f, { 0, 0, 0 });
+        m_pCamera->Initialize(m_pWindow, 90.f, { 0, 0, 2 });
     }
 
     void InitVulkan()
