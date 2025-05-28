@@ -9,9 +9,8 @@
 #include <stdexcept>
 
 Model::Model(const std::string& modelPath)
-	: m_ModelPath(modelPath)
 {
-    std::string extension = m_ModelPath.substr(m_ModelPath.find_last_of('.') + 1);
+    std::string extension = modelPath.substr(modelPath.find_last_of('.') + 1);
     if (extension == "obj") {
         LoadModelObj();
     }
@@ -29,14 +28,14 @@ Model::~Model()
 {
 }
 
-void Model::LoadModelObj()
+void Model::LoadModelObj(const std::string& modelPath)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, m_ModelPath.c_str()))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str()))
     {
         throw std::runtime_error(err);
     }
@@ -73,6 +72,6 @@ void Model::LoadModelObj()
     }
 }
 
-void Model::LoadModelGltf()
+void Model::LoadModelGltf(const std::string& modelPath)
 {
 }
