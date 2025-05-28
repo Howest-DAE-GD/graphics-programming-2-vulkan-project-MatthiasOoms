@@ -164,7 +164,7 @@ public:
 				// Clamp pitch
 				totalPitch = glm::clamp(totalPitch, -180.f, 0.f);
 
-				// Create rotation matrix - replace with your Matrix or glm
+				// Create rotation matrix
 				Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
 
 				forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
@@ -185,7 +185,7 @@ public:
 
 			totalYaw += deltaX * rotSpeed;
 
-			Matrix rot = Matrix::CreateRotationY(-totalYaw * TO_RADIANS);
+			Matrix rot = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationZ(-totalYaw * TO_RADIANS);
 
 			forward = Matrix::Normalize(rot.TransformVector(glm::vec3{ 0, 0, -1 }));
 			right = Matrix::Normalize(rot.TransformVector(glm::vec3{ 1, 0, 0 }));
