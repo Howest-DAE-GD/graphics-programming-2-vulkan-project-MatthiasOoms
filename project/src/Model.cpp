@@ -1,19 +1,35 @@
 #include "Model.h"
-#include "tiny_obj_loader.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
+#include "tiny_gltf.h"
+
 #include <unordered_map>
 #include <stdexcept>
 
 Model::Model(const std::string& modelPath)
 	: m_ModelPath(modelPath)
 {
-	LoadModel();
+    std::string extension = m_ModelPath.substr(m_ModelPath.find_last_of('.') + 1);
+    if (extension == "obj") {
+        LoadModelObj();
+    }
+    else if (extension == "gltf" || extension == "glb") {
+        LoadModelGltf();
+    }
+    else {
+        throw std::runtime_error("Unsupported file format: " + extension);
+    }
+
+	LoadModelObj();
 }
 
 Model::~Model()
 {
 }
 
-void Model::LoadModel()
+void Model::LoadModelObj()
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -55,4 +71,8 @@ void Model::LoadModel()
             m_Indices.push_back(uniqueVertices[vertex]);
         }
     }
+}
+
+void Model::LoadModelGltf()
+{
 }

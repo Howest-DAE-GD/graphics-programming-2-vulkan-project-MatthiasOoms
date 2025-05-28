@@ -9,7 +9,8 @@ class Model
 public:
 	Model(const std::string& modelPath);
 	~Model();
-	void LoadModel();
+	void LoadModelObj();
+	void LoadModelGltf();
 	const std::vector<Vertex> GetVertices() const { return m_Vertices; }
 	const std::vector<uint32_t> GetIndices() const { return m_Indices; }
 

@@ -20,10 +20,11 @@ set(SOURCES
     "src/Image.cpp" 
     "src/Texture.cpp"
     "src/Camera.h"
-    "src/Matrix.cpp" "src/Timer.cpp")
+    "src/Matrix.cpp"
+    "src/Timer.cpp")
 
 # Create the executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} )
 
 # Find Vulkan
 find_package(Vulkan REQUIRED)
@@ -69,6 +70,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# Fetch tinygltf
+FetchContent_Declare(
+    tinygltf
+    GIT_REPOSITORY https://github.com/syoyo/tinygltf
+    GIT_TAG release
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)   #GIT_TAG v2.9.5
+FetchContent_MakeAvailable(tinygltf)
+
 # Fetch tiny_obj_loader
 FetchContent_Declare(
     tinyobjloader
@@ -78,20 +89,13 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
     EXCLUDE_FROM_ALL TRUE
 )
-FetchContent_GetProperties(tinyobjloader)
-if(NOT tinyobjloader_POPULATED)
-    FetchContent_Populate(tinyobjloader)
-    execute_process(COMMAND git sparse-checkout set tiny_obj_loader.h
-                    WORKING_DIRECTORY ${tinyobjloader_SOURCE_DIR})
-    add_library(tinyobjloader INTERFACE)
-    target_include_directories(tinyobjloader INTERFACE ${tinyobjloader_SOURCE_DIR})
-endif()
+FetchContent_MakeAvailable(tinyobjloader)
 
 # Add the stb_image and tiny_object_loader directory to your include paths
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm tinyobjloader)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm tinyobjloader tinygltf)
 
 # Copy resources to output folder
 set(TEXTURES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources/textures")

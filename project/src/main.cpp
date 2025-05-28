@@ -22,12 +22,6 @@
 #include "Camera.h"
 #include "Timer.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-
 #include <unordered_map> // unordered_map
 #include <stdexcept> // runtime_error
 #include <algorithm> // clamp

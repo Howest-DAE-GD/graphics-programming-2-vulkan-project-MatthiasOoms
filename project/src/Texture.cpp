@@ -1,11 +1,12 @@
 #include "Texture.h"
-#include "Texture.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include "LogicalDevice.h"
 #include "CommandBuffers.h"
 #include "CommandPool.h"
 #include "Buffer.h"
-#include "stb_image.h"
-#include "CommandPool.h"
 #include <stdexcept>
 
 // Do not call parent constructor
