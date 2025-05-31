@@ -5,7 +5,7 @@
 #include "Model.h"
 #include <stdexcept>
 
-Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const uint32_t* pData, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel)
+Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const uint32_t* pData, LogicalDevice* pDevice, CommandPool* pCommandPool)
 	: m_Size(size)
 	, m_Usage(usage)
 	, m_Properties(properties)
@@ -31,7 +31,7 @@ Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlag
 	vkFreeMemory(m_pDevice->GetVkDevice(), stagingBufferMemory, nullptr);
 }
 
-Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const Vertex* pData, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel)
+Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const Vertex* pData, LogicalDevice* pDevice, CommandPool* pCommandPool)
 	: m_Size(size)
 	, m_Usage(usage)
 	, m_Properties(properties)

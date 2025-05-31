@@ -9,21 +9,22 @@
 class Model
 {
 public:
-	Model(const std::string& modelPath);
-	~Model();
-	void LoadModelObj(const std::string& modelPath);
-	void LoadModelGltf(const std::string& modelPath);
-	const std::vector<Vertex> GetVertices() const { return m_Vertices; }
-	const std::vector<uint32_t> GetIndices() const { return m_Indices; }
+	Model() = default;
+	~Model() = default;
+	std::vector<Vertex>& GetVertices() { return m_Vertices; }
+	std::vector<uint32_t>& GetIndices() { return m_Indices; }
+	std::vector<std::string>& GetDiffuseTextures() { return m_DiffuseTextures; }
+    uint32_t GetFirstIndex() const { return m_FirstIndex; }
+    uint32_t GetVertexOffset() const { return m_VertexOffset; }
+
+    void SetFirstIndex(uint32_t index) { m_FirstIndex = index; }
+    void SetVertexOffset(uint32_t offset) { m_VertexOffset = offset; }
 
 private:
-	void FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive);
-	void FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive);
-	void FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path);
+    std::vector<Vertex> m_Vertices;
+    std::vector<uint32_t> m_Indices;
+    std::vector<std::string> m_DiffuseTextures;
 
-	std::string GetFolderPath(const std::string& filename);
-
-	std::vector<Vertex> m_Vertices;
-	std::vector<uint32_t> m_Indices;
-	std::vector<std::string> m_DiffuseTextures;
+    uint32_t m_FirstIndex = 0;
+    uint32_t m_VertexOffset = 0;
 };

@@ -13,7 +13,7 @@ set(SOURCES
     "src/GraphicsPipeline.cpp" 
     "src/CommandPool.cpp" 
     "src/CommandBuffers.cpp" 
-    "src/Model.cpp" 
+    "src/Model.h"
     "src/Buffer.cpp" 
     "src/DescriptorPool.cpp" 
     "src/DescriptorSets.cpp" 
@@ -21,7 +21,8 @@ set(SOURCES
     "src/Texture.cpp"
     "src/Camera.h"
     "src/Matrix.cpp"
-    "src/Timer.cpp")
+    "src/Timer.cpp"
+    "src/ModelLoader.cpp")
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${SOURCES} )

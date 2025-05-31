@@ -1,35 +1,43 @@
-#include "Model.h"
+#include "ModelLoader.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 #include <stdexcept>
 
-Model::Model(const std::string& modelPath)
+ModelLoader::ModelLoader()
+{}
+
+ModelLoader::~ModelLoader()
+{
+}
+
+std::vector<Model*> ModelLoader::LoadModel(const std::string& modelPath)
 {
     std::string extension = modelPath.substr(modelPath.find_last_of('.') + 1);
 
     if (extension == "obj")
     {
-        LoadModelObj(modelPath);
+        return LoadModelObj(modelPath);
     }
-    else if (extension == "gltf" || extension == "glb")
+    else if (extension == "gltf")
     {
-        LoadModelGltf(modelPath);
+        return LoadModelGltf(modelPath);
     }
     else
     {
         throw std::runtime_error("Unsupported file format: " + extension);
     }
+
+	return std::vector<Model*>{};
 }
 
-Model::~Model()
+std::vector<Model*> ModelLoader::LoadModelObj(const std::string& modelPath)
 {
-}
+	std::vector<Model*> models;
 
-void Model::LoadModelObj(const std::string& modelPath)
-{
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -44,6 +52,10 @@ void Model::LoadModelObj(const std::string& modelPath)
 
     for (const auto& shape : shapes)
     {
+		// Create a new model
+		models.push_back(new Model{});
+		Model& model = *models.back();
+
         for (const auto& index : shape.mesh.indices)
         {
             Vertex vertex{};
@@ -63,55 +75,42 @@ void Model::LoadModelObj(const std::string& modelPath)
 
             if (uniqueVertices.count(vertex) == 0)
             {
-                uniqueVertices[vertex] = static_cast<uint32_t>(m_Vertices.size());
-                m_Vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(model.GetVertices().size());
+                model.GetVertices().push_back(vertex);
             }
 
-            m_Indices.push_back(uniqueVertices[vertex]);
+            model.GetIndices().push_back(uniqueVertices[vertex]);
         }
     }
+
+	return models;
 }
 
-void Model::LoadModelGltf(const std::string& modelPath)
+std::vector<Model*> ModelLoader::LoadModelGltf(const std::string& modelPath)
 {
+    std::vector<Model*> models;
+
     tinygltf::TinyGLTF loader{};
     tinygltf::Model gltfModel{};
-    std::string error{};
-    std::string warn{};
+    std::string error{}, warn{};
 
-    // Try to read file
     bool result = loader.LoadASCIIFromFile(&gltfModel, &error, &warn, modelPath);
 
-    if (!warn.empty())
+    if (!warn.empty()) throw std::runtime_error("gltf Warning: " + warn);
+    if (!error.empty()) throw std::runtime_error("gltf Error: " + error);
+    if (!result) throw std::runtime_error("Unable to load model");
+
+    const auto& scene = gltfModel.scenes[gltfModel.defaultScene];
+
+    for (int nodeIndex : scene.nodes)
     {
-        throw std::runtime_error("gltf Warning: " + warn);
+        ProcessNode(gltfModel, nodeIndex, glm::mat4(1.0f), models, modelPath);
     }
 
-    if (!error.empty())
-    {
-        throw std::runtime_error("gltf Error: " + error);
-    }
-
-    if (!result)
-    {
-        throw std::runtime_error("Unable to load model");
-    }
-
-    // Go over meshes
-    for (auto& currentMesh : gltfModel.meshes)
-    {
-        // Go over primitives
-        for (auto& primitive : currentMesh.primitives)
-        {
-            // Extract vertices, indices and texture names
-            FillVertices(gltfModel, primitive);
-            FillIndices(gltfModel, primitive);
-            FillDiffuseTextures(gltfModel, primitive, GetFolderPath(modelPath));
-        }
-    }
+    return models;
 }
 
-void Model::FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive)
+void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices, const glm::mat4& transform)
 {
     // Find attributes in the primitive
     auto posIt = primitive.attributes.find("POSITION");
@@ -157,18 +156,28 @@ void Model::FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primi
     {
         Vertex v = {};
 
-        if (posData) v.pos = glm::vec3(posData[i * 3 + 0], posData[i * 3 + 1], posData[i * 3 + 2]);
-        if (colData) v.color = glm::vec4(colData[i * 4 + 0], colData[i * 4 + 1], colData[i * 4 + 2], colData[i * 4 + 3]);
-        if (texData) v.texCoord = glm::vec2(texData[i * 2 + 0], texData[i * 2 + 1]);
+        if (posData) 
+        {
+            glm::vec4 pos = glm::vec4(posData[i * 3 + 0], posData[i * 3 + 1], posData[i * 3 + 2], 1.0f);
+            v.pos = glm::vec3(transform * pos);
+        }
+        if (colData) 
+        {
+            v.color = glm::vec4(colData[i * 4 + 0], colData[i * 4 + 1], colData[i * 4 + 2], colData[i * 4 + 3]);
+        }
+        if (texData) 
+        {
+            v.texCoord = glm::vec2(texData[i * 2 + 0], texData[i * 2 + 1]);
+        }
 
-        m_Vertices.push_back(v);
+        vertices.push_back(v);
     }
 }
 
-void Model::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive)
+void ModelLoader::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indices)
 {
     // If there is no indices
-    if (primitive.indices < 0) 
+    if (primitive.indices < 0)
     {
         return;
     }
@@ -186,7 +195,7 @@ void Model::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primit
         for (size_t i = 0; i < count; i++)
         {
             // Convert uint16_t to uint32_t
-            m_Indices.push_back(static_cast<uint32_t>(data[i]));
+            indices.push_back(static_cast<uint32_t>(data[i]));
         }
     }
     else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
@@ -195,7 +204,7 @@ void Model::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primit
         for (size_t i = 0; i < count; i++)
         {
             // No conversion needed for uint32_t to uint32_t
-            m_Indices.push_back(data[i]);
+            indices.push_back(data[i]);
         }
     }
     else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
@@ -204,16 +213,16 @@ void Model::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primit
         for (size_t i = 0; i < count; i++)
         {
             // Convert uint8_t to uint32_t
-            m_Indices.push_back(static_cast<uint32_t>(data[i]));
+            indices.push_back(static_cast<uint32_t>(data[i]));
         }
     }
 }
 
-void Model::FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path)
+void ModelLoader::FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::vector<std::string>& diffuseTextures)
 {
     const int& materialIndex = primitive.material;
 
-    if (materialIndex < 0) 
+    if (materialIndex < 0)
     {
         return;
     }
@@ -229,10 +238,71 @@ void Model::FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Pr
     const tinygltf::Texture& text = model.textures[texIdx];
     const tinygltf::Image& img = model.images[text.source];
 
-    m_DiffuseTextures.push_back(path + img.uri);
+    diffuseTextures.push_back(path + img.uri);
 }
 
-std::string Model::GetFolderPath(const std::string& filename)
+void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform, std::vector<Model*>& models, const std::string& modelPath)
+{
+    const tinygltf::Node& node = model.nodes[nodeIndex];
+
+    glm::mat4 localTransform = glm::mat4(1.0f);
+
+    // Apply translation
+    if (node.translation.size() == 3)
+    {
+        localTransform = glm::translate(localTransform, glm::vec3(
+            node.translation[0],
+            node.translation[1],
+            node.translation[2]
+        ));
+    }
+
+    // Apply rotation (as quaternion)
+    if (node.rotation.size() == 4)
+    {
+        glm::quat q(
+            node.rotation[3], // w
+            node.rotation[0], // x
+            node.rotation[1], // y
+            node.rotation[2]  // z
+        );
+        localTransform *= glm::toMat4(q);
+    }
+
+    // Apply scale
+    if (node.scale.size() == 3)
+    {
+        localTransform = glm::scale(localTransform, glm::vec3(
+            node.scale[0],
+            node.scale[1],
+            node.scale[2]
+        ));
+    }
+
+    glm::mat4 globalTransform = parentTransform * localTransform;
+
+    if (node.mesh >= 0)
+    {
+        // Create model and load primitives with transform
+        models.push_back(new Model{});
+        Model& modelObj = *models.back();
+
+        for (auto& primitive : model.meshes[node.mesh].primitives)
+        {
+            FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
+            FillIndices(model, primitive, modelObj.GetIndices());
+            FillDiffuseTextures(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTextures());
+        }
+    }
+
+    // Recursively process children
+    for (int childIndex : node.children)
+    {
+        ProcessNode(model, childIndex, globalTransform, models, modelPath);
+    }
+}
+
+std::string ModelLoader::GetFolderPath(const std::string& filename)
 {
     auto index = filename.find_last_of("/");
 

@@ -9,8 +9,8 @@ class Model;
 class Buffer
 {
 public:
-	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const uint32_t* data, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel);
-	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const Vertex* data, LogicalDevice* pDevice, CommandPool* pCommandPool, Model* pModel);
+	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const uint32_t* data, LogicalDevice* pDevice, CommandPool* pCommandPool);
+	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const Vertex* data, LogicalDevice* pDevice, CommandPool* pCommandPool);
 	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, LogicalDevice* pDevice, CommandPool* pCommandPool, void** uniformBufferMapped);
 	~Buffer();
 	VkBuffer& GetBuffer() { return m_Buffer; }
@@ -28,5 +28,4 @@ private:
 	VkDeviceSize m_Size;
 	VkBufferUsageFlags m_Usage;
 	VkMemoryPropertyFlags m_Properties;
-
 };

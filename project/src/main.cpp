@@ -21,6 +21,7 @@
 #include "Texture.h"
 #include "Camera.h"
 #include "Timer.h"
+#include "ModelLoader.h"
 
 #include <unordered_map> // unordered_map
 #include <stdexcept> // runtime_error
@@ -40,8 +41,9 @@ const uint32_t g_WIDTH = 800;
 const uint32_t g_HEIGHT = 600;
 
 //const std::string g_MODEL_PATH = "resources/models/Sponza.gltf";
-const std::string g_MODEL_PATH = "resources/models/Box.gltf";
+//const std::string g_MODEL_PATH = "resources/models/Box.gltf";
 //const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
+const std::string g_MODEL_PATH = "resources/models/cubes.gltf";
 const std::string g_TEXTURE_PATH = "resources/textures/viking_room.png";
 
 const int g_MAX_FRAMES_IN_FLIGHT = 2;
@@ -98,7 +100,7 @@ private:
     std::vector<VkFence> m_InFlightFences;
     uint32_t m_CurrentFrame = 0;
 
-	Model* m_pModel;
+	std::vector<Model*> m_pModels;
 
     Camera* m_pCamera;
     Timer m_Timer;
@@ -141,7 +143,7 @@ private:
         CreateDepthImage();
         CreateFrameBuffers();
         CreateTextureImage();
-        LoadModel();
+        LoadModels();
         CreateVertexBuffer();
         CreateIndexBuffer();
         CreateUniformBuffers();
@@ -253,25 +255,67 @@ private:
 		m_pTexture->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
     }
 
-    void LoadModel()
+    void LoadModels()
     {
-        m_pModel = new Model{ g_MODEL_PATH };
+		ModelLoader modelLoader{};
+
+        for (Model* model : modelLoader.LoadModel(g_MODEL_PATH))
+        {
+			m_pModels.push_back(model);
+        }
     }
 
     void CreateVertexBuffer()
     {
         VkBufferUsageFlags bufferFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         VkMemoryPropertyFlags propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        VkDeviceSize bufferSize = sizeof(m_pModel->GetVertices()[0]) * m_pModel->GetVertices().size();
-        m_pVertexBuffer = new Buffer(bufferSize, bufferFlags, propertyFlags, m_pModel->GetVertices().data(), m_pDevice, m_pCommandPool, m_pModel);
+
+		// Add the size of the vertices of each model to the total buffer size
+		std::vector<Vertex> vertices;
+		VkDeviceSize bufferSize = 0;
+
+        uint32_t vertexOffset = 0;
+        uint32_t indexOffset = 0;
+
+		for (Model* model : m_pModels)
+		{
+            model->SetVertexOffset(vertexOffset);
+            model->SetFirstIndex(indexOffset);
+
+            vertexOffset += static_cast<uint32_t>(model->GetVertices().size());
+            indexOffset += static_cast<uint32_t>(model->GetIndices().size());
+
+			bufferSize += sizeof(model->GetVertices()[0]) * model->GetVertices().size();
+			
+			for (const Vertex& vertex : model->GetVertices())
+			{
+				vertices.push_back(vertex);
+			}
+		}
+
+        m_pVertexBuffer = new Buffer(bufferSize, bufferFlags, propertyFlags, vertices.data(), m_pDevice, m_pCommandPool);
     }
 
     void CreateIndexBuffer()
     {
         VkBufferUsageFlags bufferFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         VkMemoryPropertyFlags propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        VkDeviceSize bufferSize = sizeof(m_pModel->GetIndices()[0]) * m_pModel->GetIndices().size();
-		m_pIndexBuffer = new Buffer(bufferSize, bufferFlags, propertyFlags, m_pModel->GetIndices().data(), m_pDevice, m_pCommandPool, m_pModel);
+        //VkDeviceSize bufferSize = sizeof(m_pModel->GetIndices()[0]) * m_pModel->GetIndices().size();
+
+        // Add the size of the vertices of each model to the total buffer size
+        VkDeviceSize bufferSize = 0;
+        std::vector<uint32_t> indices;
+        for (Model* model : m_pModels)
+        {
+            bufferSize += sizeof(model->GetIndices()[0]) * model->GetIndices().size();
+
+            for (const uint32_t index : model->GetIndices())
+            {
+                indices.push_back(index);
+            }
+        }
+
+		m_pIndexBuffer = new Buffer(bufferSize, bufferFlags, propertyFlags, indices.data(), m_pDevice, m_pCommandPool);
     }
 
     void CreateUniformBuffers()
@@ -420,7 +464,22 @@ private:
             
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &m_pDescriptorSets->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_pModel->GetIndices().size()), 1, 0, 0, 0);
+            // Draw all models
+            for (Model* model : m_pModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdDrawIndexed(
+                    commandBuffer,
+                    indexCount,
+                    1,              // instanceCount
+                    firstIndex,
+                    vertexOffset,
+                    0               // firstInstance
+                );
+            }
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -522,7 +581,11 @@ private:
 
     void Cleanup()
     {
-        delete m_pModel;
+		for (Model* model : m_pModels)
+		{
+			delete model;
+            model = nullptr;
+		}
 
 		m_pSwapchain->CleanupSwapChain(m_pDepthImage);
 		delete m_pSwapchain;
