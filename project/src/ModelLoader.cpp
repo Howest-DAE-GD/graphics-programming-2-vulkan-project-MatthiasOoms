@@ -96,11 +96,22 @@ std::vector<Model*> ModelLoader::LoadModelGltf(const std::string& modelPath)
 
     bool result = loader.LoadASCIIFromFile(&gltfModel, &error, &warn, modelPath);
 
-    if (!warn.empty()) throw std::runtime_error("gltf Warning: " + warn);
-    if (!error.empty()) throw std::runtime_error("gltf Error: " + error);
-    if (!result) throw std::runtime_error("Unable to load model");
+    if (!warn.empty())
+    {
+        throw std::runtime_error("gltf Warning: " + warn);
+    }
 
-    const auto& scene = gltfModel.scenes[gltfModel.defaultScene];
+    if (!error.empty())
+    {
+        throw std::runtime_error("gltf Error: " + error);
+    }
+
+    if (!result)
+    {
+        throw std::runtime_error("Unable to load model");
+    }
+
+    const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene];
 
     for (int nodeIndex : scene.nodes)
     {
@@ -215,6 +226,10 @@ void ModelLoader::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::
             // Convert uint8_t to uint32_t
             indices.push_back(static_cast<uint32_t>(data[i]));
         }
+	}
+    else
+    {
+        throw std::runtime_error("Unsupported index component type: " + std::to_string(accessor.componentType));
     }
 }
 
@@ -283,15 +298,18 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
 
     if (node.mesh >= 0)
     {
-        // Create model and load primitives with transform
-        models.push_back(new Model{});
-        Model& modelObj = *models.back();
-
-        for (auto& primitive : model.meshes[node.mesh].primitives)
+        for (const auto& mesh : model.meshes)
         {
-            FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
-            FillIndices(model, primitive, modelObj.GetIndices());
-            FillDiffuseTextures(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTextures());
+            for (auto& primitive : model.meshes[node.mesh].primitives)
+            {
+                // Create model and load primitives with transform
+                models.push_back(new Model{});
+                Model& modelObj = *models.back();
+
+                FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
+                FillIndices(model, primitive, modelObj.GetIndices());
+                FillDiffuseTextures(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTextures());
+            }
         }
     }
 
