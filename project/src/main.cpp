@@ -71,8 +71,8 @@ public:
     void Run()
     {
         InitWindow();
-        InitCamera();
         InitVulkan();
+        InitCamera();
         MainLoop();
         Cleanup();
     }
@@ -127,6 +127,7 @@ private:
     void InitCamera()
     {
 		m_pCamera = new Camera();
+		auto swapchainExtent = m_pSwapchain->GetSwapchainExtent();
         m_pCamera->Initialize(m_pWindow, 90.f, { 0, 0, 2 });
     }
 
@@ -573,10 +574,12 @@ private:
 
         UniformBufferObject ubo{};
         ubo.model = glm::mat4(1.0f);
-        //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.view = glm::lookAt(m_pCamera->GetOrigin(), m_pCamera->GetOrigin() + m_pCamera->forward, m_pCamera->up);
-		auto swapchainExtent = m_pSwapchain->GetSwapchainExtent();
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapchainExtent.width / (float)swapchainExtent.height, 0.1f, 10.0f);
+		//ubo.view = m_pCamera->viewMatrix.GetMat4();
+        //ubo.view = glm::lookAt(m_pCamera->GetOrigin(), m_pCamera->GetOrigin() + m_pCamera->forward, m_pCamera->up);
+		ubo.view = m_pCamera->viewMatrix;
+        //ubo.proj = m_pCamera->projectionMatrix.GetMat4();
+        //ubo.proj = glm::perspective(m_pCamera->GetFov(), m_pCamera->GetAspectRatio(), 0.1f, 25.0f);
+		ubo.proj = m_pCamera->projectionMatrix;
         ubo.proj[1][1] *= -1;
 
         memcpy(m_UniformBuffersMapped[currentImage], &ubo, sizeof(ubo));

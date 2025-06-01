@@ -38,11 +38,11 @@ public:
 	const float rotSpeed{ 0.25f };
 
 	const float fNear{ 0.1f };
-	const float fFar{ 100.f };
+	const float fFar{ 25.f };
 
-	Matrix viewMatrix{};
-	Matrix invViewMatrix{};
-	Matrix projectionMatrix{};
+	glm::mat4 viewMatrix{};
+	glm::mat4 invViewMatrix{};
+	glm::mat4 projectionMatrix{};
 
 	GLFWwindow* window{ nullptr };
 
@@ -91,14 +91,16 @@ public:
 	{
 		//ONB => invViewMatrix
 		//Inverse(ONB) => ViewMatrix
-		invViewMatrix = Matrix::CreateLookAtLH(origin, forward, up);
-		viewMatrix = invViewMatrix.Inverse();
+		//invViewMatrix = Matrix::CreateLookAtLH(origin, forward, up);
+		viewMatrix = glm::lookAt(origin, origin + forward, up);
+		invViewMatrix = glm::inverse(viewMatrix);
 		//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatlh
 	}
 
 	void CalculateProjectionMatrix()
 	{
-		projectionMatrix = Matrix::CreatePerspectiveFovLH(fov, aspectRatio, fNear, fFar);
+		//projectionMatrix = Matrix::CreatePerspectiveFovLH(fov, aspectRatio, fNear, fFar);
+		projectionMatrix = glm::perspective(fov, aspectRatio, fNear, fFar);
 		//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixperspectivefovlh
 	}
 
