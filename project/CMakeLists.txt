@@ -141,11 +141,10 @@ endforeach(MODEL)
 foreach(SHADER ${SHADER_FILES})
     set(SHADER_SOURCE "${SHADER}")
     get_filename_component(SHADER_NAME ${SHADER} NAME)  # Extract file name
-    get_filename_component(SHADER_EXT ${SHADER} EXT)    # Extract extension (e.g., .vert, .frag)
+    get_filename_component(SHADER_NAME_WE ${SHADER} NAME_WE)  # Get file name without extension
 
     # Remove the leading dot from the extension and construct the new file name
-    string(REPLACE "." "" SHADER_EXT_CLEAN ${SHADER_EXT})
-    set(SHADER_BINARY "${SHADER_OUT_DIR}/${SHADER_EXT_CLEAN}.spv")
+    set(SHADER_BINARY "${SHADER_OUT_DIR}/${SHADER_NAME_WE}.spv")
 
     add_custom_command(
         OUTPUT ${SHADER_BINARY}

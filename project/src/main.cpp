@@ -190,7 +190,8 @@ private:
 
     void CreateGraphicsPipeline()
     {
-		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout());
+		//m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), true);
+		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), false);
     }
 
     void CreateCommandPool()

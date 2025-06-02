@@ -5,13 +5,21 @@
 #include <vector>
 #include <fstream>
 
-GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout)
+GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, bool isDepthOnly)
 	: m_pDevice{ pDevice }
 	, m_VertexShaderModule{ VK_NULL_HANDLE }
 	, m_FragmentShaderModule{ VK_NULL_HANDLE }
 	, m_pPipelineLayout{ nullptr }
 {
-	CreateShaderModules("shaders/vert.spv", "shaders/frag.spv");
+    if (isDepthOnly)
+    {
+        CreateShaderModules("resources/shaders/depth.spv", nullptr);
+    }
+    else
+    {
+        CreateShaderModules("resources/shaders/vert.spv", "resources/shaders/frag.spv");
+    }
+
     CreatePipelineLayout(pDescriptorSetLayout);
 	CreateGraphicsPipeline(renderPass);
 }
@@ -42,21 +50,38 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass)
     fragShaderStageInfo.module = m_FragmentShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] =
+    VkPipelineShaderStageCreateInfo shaderStages[2] =
     {
         vertShaderStageInfo,
-        fragShaderStageInfo
     };
+    uint32_t stageCount = 1;
+
+
+	if (m_FragmentShaderModule != VK_NULL_HANDLE)
+	{
+		shaderStages[1] = fragShaderStageInfo;
+        stageCount = 2;
+	}
 
     auto bindingDescription = Vertex::GetBindingDescription();
-    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
+
+	// Fill with depth attributes if this is a depth-only pipeline
+    auto attributeDescriptions = Vertex::GetDepthAttributeDescriptions();
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
+
+	// Overwrite if this is not a depth-only pipeline
+    if (m_FragmentShaderModule != VK_NULL_HANDLE)
+    {
+        auto attributeDescriptions = Vertex::GetAttributeDescriptions();
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
+    }
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -136,7 +161,7 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass)
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
+    pipelineInfo.stageCount = stageCount;
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -184,11 +209,16 @@ std::vector<char> GraphicsPipeline::ReadFile(const std::string& filename)
 
 void GraphicsPipeline::CreateShaderModules(const char* vertexPath, const char* fragmentPath)
 {
-	std::vector<char> vertShaderCode = ReadFile("resources/shaders/vert.spv");
-	std::vector<char> fragShaderCode = ReadFile("resources/shaders/frag.spv");
-
-	m_VertexShaderModule = CreateShaderModule(vertShaderCode);
-	m_FragmentShaderModule = CreateShaderModule(fragShaderCode);
+    if (vertexPath)
+    {
+        std::vector<char> vertShaderCode = ReadFile(vertexPath);
+        m_VertexShaderModule = CreateShaderModule(vertShaderCode);
+    }
+    if (fragmentPath)
+    {
+        std::vector<char> fragShaderCode = ReadFile(fragmentPath);
+        m_FragmentShaderModule = CreateShaderModule(fragShaderCode);
+    }
 }
 
 VkShaderModule GraphicsPipeline::CreateShaderModule(const std::vector<char>& code)

@@ -9,7 +9,7 @@ class LogicalDevice;
 class GraphicsPipeline
 {
 public:
-	GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout);
+	GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, bool isDepthOnly);
 	~GraphicsPipeline();
 	VkPipeline* GetGraphicsPipeline() { return &m_GraphicsPipeline; }
 	PipelineLayout* GetPipelineLayout() { return m_pPipelineLayout; }
