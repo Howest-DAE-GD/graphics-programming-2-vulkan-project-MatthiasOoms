@@ -17,6 +17,7 @@ public:
 	void CreateImageViews();
 	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void CreateFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
+	void CreateFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, bool isDepthOnly);
 
 	VkFormat GetSwapchainImageFormat() const { return m_SwapchainImageFormat; }
 	std::vector<VkFramebuffer> GetSwapChainFramebuffers() { return m_SwapchainFramebuffers; }

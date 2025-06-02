@@ -45,8 +45,6 @@ const std::string g_MODEL_PATH = "resources/models/Sponza.gltf";
 //const std::string g_MODEL_PATH = "resources/models/viking_room.obj";
 //const std::string g_MODEL_PATH = "resources/models/cubes.gltf";
 
-const std::string g_TEXTURE_PATH = "resources/textures/viking_room.png";
-
 const int g_MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> g_ValidationLayers = 
@@ -87,11 +85,14 @@ private:
 	PhysicalDevice* m_pPhysicalDevice;
 	LogicalDevice* m_pDevice;
 
+	//Swapchain* m_pDepthSwapchain;
 	Swapchain* m_pSwapchain;
 
     RenderPass* m_pRenderPass;
+    RenderPass* m_pDepthRenderPass;
 	DescriptorSetLayout* m_pDescriptorSetLayout;
 	GraphicsPipeline* m_pGraphicsPipeline;
+	GraphicsPipeline* m_pDepthGraphicsPipeline;
 
 	CommandPool* m_pCommandPool;
 
@@ -170,16 +171,19 @@ private:
 
     void CreateSwapChain()
     {
+		//m_pDepthSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance);
 		m_pSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance);
     }
 
     void CreateImageViews()
     {
+		//m_pDepthSwapchain->CreateImageViews();
 		m_pSwapchain->CreateImageViews();
     }
 
     void CreateRenderPass()
     {
+		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapchainImageFormat(), FindDepthFormat());
     }
 
@@ -190,7 +194,7 @@ private:
 
     void CreateGraphicsPipeline()
     {
-		//m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), true);
+		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), true);
 		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), false);
     }
 
@@ -238,6 +242,7 @@ private:
 
 	void CreateFrameBuffers()
 	{
+        //m_pDepthSwapchain->CreateFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView(), m_pDepthRenderPass->IsDepthOnly());
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
 	}
 
@@ -398,11 +403,13 @@ private:
         CreateSwapChain();
         CreateImageViews();
 		CreateDepthImage();
+        //m_pDepthSwapchain->CreateFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
     }
 
     void CleanupSwapChain()
     {
+		//m_pDepthSwapchain->CleanupSwapChain(m_pDepthImage);
 		m_pSwapchain->CleanupSwapChain(m_pDepthImage);
     }
 
@@ -433,6 +440,40 @@ private:
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
+        //VkRenderPassBeginInfo depthPrePassInfo{};
+        //depthPrePassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        //depthPrePassInfo.renderPass = m_pDepthRenderPass->GetRenderPass();
+        //depthPrePassInfo.framebuffer = m_pDepthSwapchain->GetSwapChainFramebuffers()[imageIndex];
+
+        //depthPrePassInfo.renderArea.offset = { 0, 0 };
+        //auto extent = m_pDepthSwapchain->GetSwapchainExtent(); // Or depth image extent if different
+        //depthPrePassInfo.renderArea.extent = extent;
+
+        //VkClearValue depthClear{};
+        //depthClear.depthStencil = { 1.0f, 0 }; // Clear depth to farthest value (1.0)
+
+        //depthPrePassInfo.clearValueCount = 1;
+        //depthPrePassInfo.pClearValues = &depthClear;
+
+        /*vkCmdBeginRenderPass(commandBuffer, &depthPrePassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pDepthGraphicsPipeline->GetGraphicsPipeline());
+        
+            for (Model* model : m_pModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    m_pDepthGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1,
+                    &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
+                vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
+            }
+
+        vkCmdEndRenderPass(commandBuffer);*/
+
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = m_pRenderPass->GetRenderPass();
@@ -442,9 +483,8 @@ private:
 		auto swapChainExtent = m_pSwapchain->GetSwapchainExtent();
         renderPassInfo.renderArea.extent = swapChainExtent;
 
-        std::array<VkClearValue, 2> clearValues{};
+        std::array<VkClearValue, 1> clearValues{};
         clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-        clearValues[1].depthStencil = { 1.0f, 0 };
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
@@ -551,7 +591,7 @@ private:
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapChains[] = { m_pSwapchain->GetSwapchain()};
+        VkSwapchainKHR swapChains[] = { m_pSwapchain->GetSwapchain() };
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapChains;
         presentInfo.pImageIndices = &imageIndex;
@@ -600,8 +640,11 @@ private:
             model = nullptr;
 		}
 
-		m_pSwapchain->CleanupSwapChain(m_pDepthImage);
-		delete m_pSwapchain;
+		//m_pDepthSwapchain->CleanupSwapChain(m_pDepthImage);
+		//delete m_pDepthSwapchain;
+
+        m_pSwapchain->CleanupSwapChain(m_pDepthImage);
+        delete m_pSwapchain;
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -615,8 +658,10 @@ private:
         delete m_pIndexBuffer;
 		delete m_pVertexBuffer;
 
+		delete m_pDepthGraphicsPipeline;
 		delete m_pGraphicsPipeline;
 
+		delete m_pDepthRenderPass;
 		delete m_pRenderPass;
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)

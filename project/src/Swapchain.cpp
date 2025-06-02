@@ -154,3 +154,33 @@ void Swapchain::CreateFramebuffers(VkRenderPass renderPass, VkImageView depthIma
         }
     }
 }
+
+void Swapchain::CreateFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, bool isDepthOnly)
+{
+    if (!isDepthOnly)
+    {
+        CreateFramebuffers(renderPass, depthImageView);
+    }
+    else
+    {
+        m_SwapchainFramebuffers.resize(m_SwapchainImageViews.size());
+        for (size_t i{}; i < m_SwapchainImageViews.size(); ++i)
+        {
+            std::array<VkImageView, 1> attachments = { depthImageView };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebufferInfo.pAttachments = attachments.data();
+            framebufferInfo.width = m_SwapchainExtent.width;
+            framebufferInfo.height = m_SwapchainExtent.height;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(m_pDevice->GetVkDevice(), &framebufferInfo, nullptr, &m_SwapchainFramebuffers[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("failed to create framebuffer!");
+            }
+        }
+    }
+}
