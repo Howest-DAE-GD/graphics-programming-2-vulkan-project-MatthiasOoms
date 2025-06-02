@@ -70,6 +70,7 @@ class HelloTriangleApplication
 public:
     void Run()
     {
+        LoadModels();
         InitWindow();
         InitVulkan();
         InitCamera();
@@ -113,9 +114,6 @@ private:
     std::vector<void*> m_UniformBuffersMapped;
 
 	DescriptorPool* m_pDescriptorPool;
-    DescriptorSets* m_pDescriptorSets;
-
-	Texture* m_pTexture;
 
     Image* m_pDepthImage;
 
@@ -145,7 +143,6 @@ private:
         CreateDepthImage();
         CreateFrameBuffers();
         CreateTextureImage();
-        LoadModels();
         CreateVertexBuffer();
         CreateIndexBuffer();
         CreateUniformBuffers();
@@ -248,13 +245,18 @@ private:
 		VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 		VkImageUsageFlagBits usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		m_pTexture = new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapchainImageFormat(), tiling, usage, properties, g_TEXTURE_PATH);
-        CreateTextureSampler();
-    }
-
-    void CreateTextureSampler()
-    {
-		m_pTexture->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+        
+        // Loop over all meshes and create a texture for each one
+		for (Model* model : m_pModels)
+		{
+			if (model->GetDiffuseTexture().empty())
+			{
+				continue; // Skip models without a texture path
+			}
+			// Create a texture for the model
+			model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapchainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
+            model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+        }
     }
 
     void LoadModels()
@@ -337,12 +339,16 @@ private:
 
     void CreateDescriptorPool()
     {
-		m_pDescriptorPool = new DescriptorPool(g_MAX_FRAMES_IN_FLIGHT, m_pDevice);
+		m_pDescriptorPool = new DescriptorPool(g_MAX_FRAMES_IN_FLIGHT, m_pModels.size(), m_pDevice);
     }
 
     void CreateDescriptorSets()
     {
-		m_pDescriptorSets = new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *m_pTexture->GetImageView(), *m_pTexture->GetSampler());
+		// Create descriptor sets for each model
+		for (Model* model : m_pModels)
+		{
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetTexture()->GetImageView(), *model->GetTexture()->GetSampler()));
+		}
     }
 
     void CreateCommandBuffers()
@@ -466,8 +472,6 @@ private:
 
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
             
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &m_pDescriptorSets->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
-
             // Draw all models
             for (Model* model : m_pModels)
             {
@@ -475,13 +479,15 @@ private:
                 uint32_t firstIndex = model->GetFirstIndex();
                 int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
 
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
                 vkCmdDrawIndexed(
                     commandBuffer,
                     indexCount,
-                    1,              // instanceCount
+                    1,
                     firstIndex,
                     vertexOffset,
-                    0               // firstInstance
+                    0
                 );
             }
 
@@ -595,8 +601,6 @@ private:
 
 		m_pSwapchain->CleanupSwapChain(m_pDepthImage);
 		delete m_pSwapchain;
-
-        delete m_pTexture;     
 
         for (size_t i{}; i < g_MAX_FRAMES_IN_FLIGHT; ++i)
         {

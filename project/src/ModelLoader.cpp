@@ -233,7 +233,7 @@ void ModelLoader::FillIndices(const tinygltf::Model& gltfModel, const tinygltf::
     }
 }
 
-void ModelLoader::FillDiffuseTextures(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::vector<std::string>& diffuseTextures)
+void ModelLoader::FillDiffuseTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& diffuseTexture)
 {
     const int& materialIndex = primitive.material;
 
@@ -253,7 +253,7 @@ void ModelLoader::FillDiffuseTextures(const tinygltf::Model& model, const tinygl
     const tinygltf::Texture& text = model.textures[texIdx];
     const tinygltf::Image& img = model.images[text.source];
 
-    diffuseTextures.push_back(path + img.uri);
+    diffuseTexture = path + img.uri;
 }
 
 void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform, std::vector<Model*>& models, const std::string& modelPath)
@@ -308,7 +308,7 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
 
                 FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
                 FillIndices(model, primitive, modelObj.GetIndices());
-                FillDiffuseTextures(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTextures());
+                FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexture());
             }
         }
     }

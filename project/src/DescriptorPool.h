@@ -6,7 +6,7 @@ class LogicalDevice;
 class DescriptorPool
 {
 public:
-	DescriptorPool(int maxFramesInFlight, LogicalDevice* pDevice);
+	DescriptorPool(int maxFramesInFlight, int modelCount, LogicalDevice* pDevice);
 	~DescriptorPool();
 	VkDescriptorPool* GetDescriptorPool() { return &m_DescriptorPool; }
 

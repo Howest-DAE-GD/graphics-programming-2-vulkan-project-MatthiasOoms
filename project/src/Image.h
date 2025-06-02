@@ -8,13 +8,13 @@ class Image
 {
 public:
 	Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties);
+	Image() = default;
 	virtual ~Image();
 
 	virtual VkImage* GetImage() { return &m_Image; }
 	virtual VkDeviceMemory* GetImageMemory() { return &m_ImageMemory; }
 	virtual VkImageView* GetImageView() { return &m_ImageView; }
 
-	Image();
 protected:
 	LogicalDevice* m_pDevice;
 	CommandPool* m_pCommandPool;

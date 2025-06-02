@@ -15,10 +15,6 @@ Image::Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapc
     TransitionImageLayout(imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-Image::Image()
-{
-}
-
 Image::~Image()
 {
     vkDestroyImageView(m_pDevice->GetVkDevice(), m_ImageView, nullptr);
