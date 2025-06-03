@@ -1,12 +1,13 @@
 #include "Swapchain.h"
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
+#include "CommandPool.h"
 #include "Instance.h"
 #include "Image.h"
 #include <stdexcept>
 #include <array>
 
-Swapchain::Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, Instance* pInstance)
+Swapchain::Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, Instance* pInstance, CommandPool* pCommandPool)
 	: m_pDevice(pDevice)
 	, m_pInstance(pInstance)
 	, m_pPhysicalDevice(pPhysicalDevice)
@@ -74,10 +75,26 @@ Swapchain::Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, In
     vkGetSwapchainImagesKHR(m_pDevice->GetVkDevice(), m_Swapchain, &imageCount, nullptr);
     m_SwapchainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(m_pDevice->GetVkDevice(), m_Swapchain, &imageCount, m_SwapchainImages.data());
+
+    CreateImages(pCommandPool);
 }
 
 Swapchain::~Swapchain()
 {
+    for (auto image : m_pGBufferAlbedoImages)
+    {
+        delete image;
+    }
+
+    for (auto image : m_pGBufferNormalImages)
+    {
+        delete image;
+    }
+
+    for (auto image : m_pGBufferPositionImages)
+    {
+        delete image;
+    }
 }
 
 void Swapchain::CleanupSwapChain(Image* pImage)
@@ -180,5 +197,60 @@ void Swapchain::CreateDepthFramebuffers(VkRenderPass renderPass, VkImageView dep
         {
             throw std::runtime_error("failed to create framebuffer!");
         }
+    }
+}
+
+void Swapchain::CreateImages(CommandPool* pCommandPool)
+{
+    VkExtent2D extent = m_SwapchainExtent;
+
+    VkFormat albedoFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    VkFormat normalFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+    VkFormat positionFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+
+    size_t count = m_SwapchainImages.size();
+
+    m_pGBufferAlbedoImages.resize(count);
+    m_pGBufferNormalImages.resize(count);
+    m_pGBufferPositionImages.resize(count);
+
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    VkImageUsageFlagBits usage = VkImageUsageFlagBits(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+	VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImageLayout newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        m_pGBufferAlbedoImages[i] = new Image{
+            m_pDevice, pCommandPool, extent, albedoFormat,
+            tiling,
+            usage,
+            properties,
+            aspect,
+            oldLayout,
+			newLayout
+        };
+
+        m_pGBufferNormalImages[i] = new Image(
+            m_pDevice, pCommandPool, extent, normalFormat,
+            tiling,
+            usage,
+            properties,
+			aspect,
+			oldLayout,
+			newLayout
+        );
+
+        m_pGBufferPositionImages[i] = new Image(
+            m_pDevice, pCommandPool, extent, positionFormat,
+            tiling,
+            usage,
+            properties,
+			aspect,
+			oldLayout,
+			newLayout
+        );
     }
 }

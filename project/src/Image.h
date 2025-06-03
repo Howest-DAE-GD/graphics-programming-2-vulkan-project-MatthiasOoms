@@ -7,7 +7,7 @@ class CommandPool;
 class Image
 {
 public:
-	Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties);
+	Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, VkImageAspectFlagBits aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
 	Image() = default;
 	virtual ~Image();
 

@@ -5,14 +5,16 @@
 #include "CommandBuffers.h"
 #include "CommandPool.h"
 
-Image::Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties)
+Image::Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, VkImageAspectFlagBits aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
 	: m_pDevice(pDevice)
     , m_pCommandPool(pCommandPool)
 {
     CreateImage(swapchainExtent.width, swapchainExtent.height, imageFormat, tiling, usage, properties, m_Image, m_ImageMemory);
-    m_ImageView = CreateImageView(imageFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    m_ImageView = CreateImageView(imageFormat, aspects);
+    //m_ImageView = CreateImageView(imageFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    TransitionImageLayout(imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    TransitionImageLayout(imageFormat, oldLayout, newLayout);
+    //TransitionImageLayout(imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 Image::~Image()
@@ -141,6 +143,13 @@ void Image::TransitionImageLayout(VkFormat format, VkImageLayout oldLayout, VkIm
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     }
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	}
     else
     {
         throw std::invalid_argument("unsupported layout transition!");

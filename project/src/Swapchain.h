@@ -4,13 +4,14 @@
 
 class LogicalDevice;
 class PhysicalDevice;
+class CommandPool;
 class Instance;
 class Image;
 
 class Swapchain
 {
 public:
-	Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, Instance* pInstance);
+	Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, Instance* pInstance, CommandPool* pCommandPool);
 	~Swapchain();
 	void CleanupSwapChain(Image* pImage);
 
@@ -26,6 +27,8 @@ public:
 	VkSwapchainKHR GetSwapchain() const { return m_Swapchain; }
 
 private:
+	void CreateImages(CommandPool* pCommandPool);
+
 	VkSwapchainKHR m_Swapchain;
 	VkFormat m_SwapchainImageFormat;
 	VkExtent2D m_SwapchainExtent;
@@ -33,6 +36,11 @@ private:
 	std::vector<VkImageView> m_SwapchainImageViews;
 	std::vector<VkFramebuffer> m_SwapchainFramebuffers;
 	std::vector<VkFramebuffer> m_SwapchainDepthFramebuffers;
+
+	// G-buffer attachments
+	std::vector<Image*> m_pGBufferAlbedoImages;
+	std::vector<Image*> m_pGBufferNormalImages;
+	std::vector<Image*> m_pGBufferPositionImages;
 
 	LogicalDevice* m_pDevice;
 	PhysicalDevice* m_pPhysicalDevice;

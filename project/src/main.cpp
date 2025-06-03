@@ -134,12 +134,12 @@ private:
         CreateInstance();
         CreatePhysicalDevice();
         CreateLogicalDevice();
+        CreateCommandPool();
         CreateSwapChain();
         CreateImageViews();
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
-        CreateCommandPool();
         CreateDepthImage();
         CreateFrameBuffers();
         CreateTextureImage();
@@ -171,7 +171,7 @@ private:
     void CreateSwapChain()
     {
 		//m_pDepthSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance);
-		m_pSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance);
+		m_pSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance, m_pCommandPool);
     }
 
     void CreateImageViews()
@@ -208,7 +208,10 @@ private:
         VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 		VkImageUsageFlagBits usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		m_pDepthImage = new Image(m_pDevice, m_pCommandPool, swapchainExtent, FindDepthFormat(), tiling, usage, properties);
+		VkImageAspectFlagBits aspects = VK_IMAGE_ASPECT_DEPTH_BIT;
+		VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		m_pDepthImage = new Image(m_pDevice, m_pCommandPool, swapchainExtent, FindDepthFormat(), tiling, usage, properties, aspects, oldLayout, newLayout);
     }
 
     VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
