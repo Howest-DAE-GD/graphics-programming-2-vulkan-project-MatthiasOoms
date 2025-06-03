@@ -21,7 +21,7 @@ GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPa
     }
 
     CreatePipelineLayout(pDescriptorSetLayout);
-	CreateGraphicsPipeline(renderPass);
+	CreateGraphicsPipeline(renderPass, isDepthOnly);
 }
 
 GraphicsPipeline::~GraphicsPipeline()
@@ -36,7 +36,7 @@ void GraphicsPipeline::CreatePipelineLayout(VkDescriptorSetLayout* pDescriptorSe
 	m_pPipelineLayout = new PipelineLayout(m_pDevice, pDescriptorSetLayout);
 }
 
-void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass)
+void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass, bool isDepthOnly)
 {
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -72,15 +72,16 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass)
 
 	// Fill with depth attributes if this is a depth-only pipeline
     auto attributeDescriptions = Vertex::GetDepthAttributeDescriptions();
+    auto attributeDescription = Vertex::GetAttributeDescriptions();
+
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
 
 	// Overwrite if this is not a depth-only pipeline
     if (m_FragmentShaderModule != VK_NULL_HANDLE)
     {
-        auto attributeDescriptions = Vertex::GetAttributeDescriptions();
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data(); // Optional
     }
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -137,6 +138,13 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass)
     depthStencil.stencilTestEnable = VK_FALSE;
     depthStencil.front = {}; // Optional
     depthStencil.back = {}; // Optional
+
+	if (!isDepthOnly)
+	{
+        depthStencil.depthTestEnable = VK_TRUE;
+        depthStencil.depthWriteEnable = VK_FALSE;
+        depthStencil.depthCompareOp = VK_COMPARE_OP_EQUAL;
+	}
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

@@ -22,7 +22,7 @@ private:
 	VkShaderModule m_FragmentShaderModule;
 
 	void CreatePipelineLayout(VkDescriptorSetLayout* pDescriptorSetLayout);
-	void CreateGraphicsPipeline(VkRenderPass renderPass);
+	void CreateGraphicsPipeline(VkRenderPass renderPass, bool isDepthOnly);
 	void CreateShaderModules(const char* vertexPath, const char* fragmentPath);
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 	static std::vector<char> ReadFile(const std::string& filename);

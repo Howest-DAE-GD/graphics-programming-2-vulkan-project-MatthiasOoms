@@ -85,14 +85,13 @@ private:
 	PhysicalDevice* m_pPhysicalDevice;
 	LogicalDevice* m_pDevice;
 
-	//Swapchain* m_pDepthSwapchain;
 	Swapchain* m_pSwapchain;
 
     RenderPass* m_pRenderPass;
     RenderPass* m_pDepthRenderPass;
-	DescriptorSetLayout* m_pDescriptorSetLayout;
 	GraphicsPipeline* m_pGraphicsPipeline;
 	GraphicsPipeline* m_pDepthGraphicsPipeline;
+	DescriptorSetLayout* m_pDescriptorSetLayout;
 
 	CommandPool* m_pCommandPool;
 
@@ -184,7 +183,7 @@ private:
     void CreateRenderPass()
     {
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
-		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapchainImageFormat(), FindDepthFormat());
+		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
     }
 
     void CreateDescriptorSetLayout()
@@ -242,8 +241,8 @@ private:
 
 	void CreateFrameBuffers()
 	{
-        //m_pDepthSwapchain->CreateFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView(), m_pDepthRenderPass->IsDepthOnly());
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
+        m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
 	}
 
     void CreateTextureImage()
@@ -260,7 +259,7 @@ private:
 				continue; // Skip models without a texture path
 			}
 			// Create a texture for the model
-			model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapchainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
+			model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
             model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
     }
@@ -403,13 +402,12 @@ private:
         CreateSwapChain();
         CreateImageViews();
 		CreateDepthImage();
-        //m_pDepthSwapchain->CreateFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
+		m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
     }
 
     void CleanupSwapChain()
     {
-		//m_pDepthSwapchain->CleanupSwapChain(m_pDepthImage);
 		m_pSwapchain->CleanupSwapChain(m_pDepthImage);
     }
 
@@ -440,25 +438,46 @@ private:
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
-        //VkRenderPassBeginInfo depthPrePassInfo{};
-        //depthPrePassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        //depthPrePassInfo.renderPass = m_pDepthRenderPass->GetRenderPass();
-        //depthPrePassInfo.framebuffer = m_pDepthSwapchain->GetSwapChainFramebuffers()[imageIndex];
+        auto swapChainExtent = m_pSwapchain->GetSwapchainExtent();
 
-        //depthPrePassInfo.renderArea.offset = { 0, 0 };
-        //auto extent = m_pDepthSwapchain->GetSwapchainExtent(); // Or depth image extent if different
-        //depthPrePassInfo.renderArea.extent = extent;
+        VkRenderPassBeginInfo depthPrePassInfo{};
+        depthPrePassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        depthPrePassInfo.renderPass = m_pDepthRenderPass->GetRenderPass();
+        depthPrePassInfo.framebuffer = m_pSwapchain->GetSwapChainDepthFramebuffers()[imageIndex];
 
-        //VkClearValue depthClear{};
-        //depthClear.depthStencil = { 1.0f, 0 }; // Clear depth to farthest value (1.0)
+        depthPrePassInfo.renderArea.offset = { 0, 0 };
+        depthPrePassInfo.renderArea.extent = swapChainExtent;
 
-        //depthPrePassInfo.clearValueCount = 1;
-        //depthPrePassInfo.pClearValues = &depthClear;
+        VkClearValue depthClear{};
+        depthClear.depthStencil = { 1.0f, 0 }; // Clear depth to farthest value (1.0)
 
-        /*vkCmdBeginRenderPass(commandBuffer, &depthPrePassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            
+        depthPrePassInfo.clearValueCount = 1;
+        depthPrePassInfo.pClearValues = &depthClear;
+
+        vkCmdBeginRenderPass(commandBuffer, &depthPrePassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pDepthGraphicsPipeline->GetGraphicsPipeline());
-        
+
+            VkViewport depthViewport{};
+            depthViewport.x = 0.0f;
+            depthViewport.y = 0.0f;
+            depthViewport.width = static_cast<float>(swapChainExtent.width);
+            depthViewport.height = static_cast<float>(swapChainExtent.height);
+            depthViewport.minDepth = 0.0f;
+            depthViewport.maxDepth = 1.0f;
+            vkCmdSetViewport(commandBuffer, 0, 1, &depthViewport);
+
+            VkRect2D depthScissor{};
+            depthScissor.offset = { 0, 0 };
+            depthScissor.extent = swapChainExtent;
+            vkCmdSetScissor(commandBuffer, 0, 1, &depthScissor);
+
+            VkBuffer vertexBuffers[] = { m_pVertexBuffer->GetBuffer() };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
             for (Model* model : m_pModels)
             {
                 uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
@@ -472,7 +491,7 @@ private:
                 vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
             }
 
-        vkCmdEndRenderPass(commandBuffer);*/
+        vkCmdEndRenderPass(commandBuffer);
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -480,7 +499,6 @@ private:
         renderPassInfo.framebuffer = m_pSwapchain->GetSwapChainFramebuffers()[imageIndex];
 
         renderPassInfo.renderArea.offset = { 0, 0 };
-		auto swapChainExtent = m_pSwapchain->GetSwapchainExtent();
         renderPassInfo.renderArea.extent = swapChainExtent;
 
         std::array<VkClearValue, 1> clearValues{};
@@ -507,8 +525,6 @@ private:
             scissor.extent = swapChainExtent;
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-            VkBuffer vertexBuffers[] = { m_pVertexBuffer->GetBuffer() };
-            VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
