@@ -1,27 +1,32 @@
 #include "GraphicsPipeline.h"
 #include "LogicalDevice.h"
+#include "RenderPass.h"
 #include "Structs.h"
 #include <stdexcept>
 #include <vector>
 #include <fstream>
 
-GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, bool isDepthOnly)
+GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader, const char* fragShader)
 	: m_pDevice{ pDevice }
 	, m_VertexShaderModule{ VK_NULL_HANDLE }
 	, m_FragmentShaderModule{ VK_NULL_HANDLE }
 	, m_pPipelineLayout{ nullptr }
 {
-    if (isDepthOnly)
-    {
-        CreateShaderModules("resources/shaders/depth.spv", nullptr);
-    }
-    else
-    {
-        CreateShaderModules("resources/shaders/vert.spv", "resources/shaders/frag.spv");
-    }
-
+	bool isDepthOnly = (fragShader == nullptr || std::string(fragShader).empty());
+    CreateShaderModules(vertShader, fragShader);
     CreatePipelineLayout(pDescriptorSetLayout);
 	CreateGraphicsPipeline(renderPass, isDepthOnly);
+}
+
+GraphicsPipeline::GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader)
+    : m_pDevice{ pDevice }
+    , m_VertexShaderModule{ VK_NULL_HANDLE }
+    , m_FragmentShaderModule{ VK_NULL_HANDLE }
+    , m_pPipelineLayout{ nullptr }
+{
+    CreateShaderModules(vertShader);
+    CreatePipelineLayout(pDescriptorSetLayout);
+    CreateGraphicsPipeline(renderPass, true);
 }
 
 GraphicsPipeline::~GraphicsPipeline()
@@ -36,7 +41,7 @@ void GraphicsPipeline::CreatePipelineLayout(VkDescriptorSetLayout* pDescriptorSe
 	m_pPipelineLayout = new PipelineLayout(m_pDevice, pDescriptorSetLayout);
 }
 
-void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass, bool isDepthOnly)
+void GraphicsPipeline::CreateGraphicsPipeline(RenderPass* renderPass, bool isDepthOnly)
 {
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -156,12 +161,15 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass, bool isDe
     colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
+    std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
+	colorBlendAttachments.resize(renderPass->GetAttachmentCount(), colorBlendAttachment);
+
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
+    colorBlending.pAttachments = colorBlendAttachments.data();
     colorBlending.blendConstants[0] = 0.0f; // Optional
     colorBlending.blendConstants[1] = 0.0f; // Optional
     colorBlending.blendConstants[2] = 0.0f; // Optional
@@ -180,7 +188,7 @@ void GraphicsPipeline::CreateGraphicsPipeline(VkRenderPass renderPass, bool isDe
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = m_pPipelineLayout->GetPipelineLayout();
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.renderPass = renderPass->GetRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
@@ -227,6 +235,17 @@ void GraphicsPipeline::CreateShaderModules(const char* vertexPath, const char* f
         std::vector<char> fragShaderCode = ReadFile(fragmentPath);
         m_FragmentShaderModule = CreateShaderModule(fragShaderCode);
     }
+}
+
+void GraphicsPipeline::CreateShaderModules(const char* vertexPath)
+{
+    if (vertexPath)
+    {
+        std::vector<char> vertShaderCode = ReadFile(vertexPath);
+        m_VertexShaderModule = CreateShaderModule(vertShaderCode);
+    }
+
+	m_FragmentShaderModule = VK_NULL_HANDLE;
 }
 
 VkShaderModule GraphicsPipeline::CreateShaderModule(const std::vector<char>& code)

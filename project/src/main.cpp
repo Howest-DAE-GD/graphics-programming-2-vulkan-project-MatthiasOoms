@@ -89,8 +89,11 @@ private:
 
     RenderPass* m_pRenderPass;
     RenderPass* m_pDepthRenderPass;
+    RenderPass* m_pDeferredRenderPass;
 	GraphicsPipeline* m_pGraphicsPipeline;
 	GraphicsPipeline* m_pDepthGraphicsPipeline;
+	GraphicsPipeline* m_pDeferredGraphicsPipeline;
+    
 	DescriptorSetLayout* m_pDescriptorSetLayout;
 
 	CommandPool* m_pCommandPool;
@@ -170,18 +173,21 @@ private:
 
     void CreateSwapChain()
     {
-		//m_pDepthSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance);
 		m_pSwapchain = new Swapchain(m_pPhysicalDevice, m_pDevice, m_pInstance, m_pCommandPool);
     }
 
     void CreateImageViews()
     {
-		//m_pDepthSwapchain->CreateImageViews();
 		m_pSwapchain->CreateImageViews();
     }
 
     void CreateRenderPass()
     {
+        auto albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
+		auto normalImage = m_pSwapchain->GetGBufferNormalImages();
+		auto positionImage = m_pSwapchain->GetGBufferPositionImages();
+
+		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
     }
@@ -193,8 +199,9 @@ private:
 
     void CreateGraphicsPipeline()
     {
-		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), true);
-		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass->GetRenderPass(), m_pDescriptorSetLayout->GetDescriptorSetLayout(), false);
+		m_pDeferredGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDeferredRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/deferredVert.spv", "resources/shaders/deferredFrag.spv");
+		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/depth.spv");
+		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv");
     }
 
     void CreateCommandPool()
@@ -659,9 +666,6 @@ private:
             model = nullptr;
 		}
 
-		//m_pDepthSwapchain->CleanupSwapChain(m_pDepthImage);
-		//delete m_pDepthSwapchain;
-
         m_pSwapchain->CleanupSwapChain(m_pDepthImage);
         delete m_pSwapchain;
 
@@ -677,9 +681,11 @@ private:
         delete m_pIndexBuffer;
 		delete m_pVertexBuffer;
 
+		delete m_pDeferredRenderPass;
 		delete m_pDepthGraphicsPipeline;
 		delete m_pGraphicsPipeline;
 
+		delete m_pDeferredGraphicsPipeline;
 		delete m_pDepthRenderPass;
 		delete m_pRenderPass;
 

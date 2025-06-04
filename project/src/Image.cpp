@@ -8,6 +8,7 @@
 Image::Image(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, VkImageAspectFlagBits aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
 	: m_pDevice(pDevice)
     , m_pCommandPool(pCommandPool)
+	, m_ImageFormat(imageFormat)
 {
     CreateImage(swapchainExtent.width, swapchainExtent.height, imageFormat, tiling, usage, properties, m_Image, m_ImageMemory);
     m_ImageView = CreateImageView(imageFormat, aspects);

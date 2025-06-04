@@ -5,11 +5,13 @@
 #include <string>
 
 class LogicalDevice;
+class RenderPass;
 
 class GraphicsPipeline
 {
 public:
-	GraphicsPipeline(LogicalDevice* pDevice, VkRenderPass renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, bool isDepthOnly);
+	GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader, const char* fragShader);
+	GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader);
 	~GraphicsPipeline();
 	VkPipeline* GetGraphicsPipeline() { return &m_GraphicsPipeline; }
 	PipelineLayout* GetPipelineLayout() { return m_pPipelineLayout; }
@@ -22,8 +24,9 @@ private:
 	VkShaderModule m_FragmentShaderModule;
 
 	void CreatePipelineLayout(VkDescriptorSetLayout* pDescriptorSetLayout);
-	void CreateGraphicsPipeline(VkRenderPass renderPass, bool isDepthOnly);
+	void CreateGraphicsPipeline(RenderPass* renderPass, bool isDepthOnly);
 	void CreateShaderModules(const char* vertexPath, const char* fragmentPath);
+	void CreateShaderModules(const char* vertexPath);
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 	static std::vector<char> ReadFile(const std::string& filename);
 	void Cleanup();

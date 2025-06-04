@@ -26,6 +26,10 @@ public:
 	VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
 	VkSwapchainKHR GetSwapchain() const { return m_Swapchain; }
 
+	std::vector<Image*> GetGBufferAlbedoImages() const { return m_pGBufferAlbedoImages; }
+	std::vector<Image*> GetGBufferNormalImages() const { return m_pGBufferNormalImages; }
+	std::vector<Image*> GetGBufferPositionImages() const { return m_pGBufferPositionImages; }
+
 private:
 	void CreateImages(CommandPool* pCommandPool);
 
