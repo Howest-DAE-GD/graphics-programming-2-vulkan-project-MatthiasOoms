@@ -8,12 +8,13 @@ class RenderPass
 {
 public:
 	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat);
+	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool writeDepth);
 	RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat);
 	RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);
 	~RenderPass();
 
 	VkRenderPass GetRenderPass() const { return m_RenderPass; }
-	bool IsDepthOnly() const { return m_IsDepthOnly; }
+	bool DoesWriteDepth() const { return m_DepthWrite; }
 	uint32_t GetAttachmentCount() const { return m_AttachmentCount; }
 
 private:
@@ -24,6 +25,6 @@ private:
 	void CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);
 	void DestroyRenderPass();
 
-	bool m_IsDepthOnly = false;
+	bool m_DepthWrite = false;
 	uint32_t m_AttachmentCount = 0;
 };

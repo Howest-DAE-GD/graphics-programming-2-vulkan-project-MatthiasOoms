@@ -100,6 +100,11 @@ void Swapchain::CleanupSwapChain(Image* pImage)
 		vkDestroyFramebuffer(m_pDevice->GetVkDevice(), m_SwapchainDepthFramebuffers[i], nullptr);
 	}
 
+	for (size_t i{}; i < m_SwapchainDeferredFramebuffers.size(); ++i)
+	{
+		vkDestroyFramebuffer(m_pDevice->GetVkDevice(), m_SwapchainDeferredFramebuffers[i], nullptr);
+	}
+
     for (size_t i{}; i < m_SwapchainImageViews.size(); ++i)
     {
         vkDestroyImageView(m_pDevice->GetVkDevice(), m_SwapchainImageViews[i], nullptr);
@@ -201,11 +206,38 @@ void Swapchain::CreateDepthFramebuffers(VkRenderPass renderPass, VkImageView dep
     }
 }
 
+void Swapchain::CreateDeferredFramebuffers(VkRenderPass renderPass)
+{
+    m_SwapchainDeferredFramebuffers.resize(m_SwapchainImageViews.size());
+    for (size_t i{}; i < m_SwapchainImageViews.size(); ++i)
+    {
+		VkImageView albedoImageView = *m_pGBufferAlbedoImages[i]->GetImageView();
+		VkImageView normalImageView = *m_pGBufferNormalImages[i]->GetImageView();
+		VkImageView positionImageView = *m_pGBufferPositionImages[i]->GetImageView();
+
+        std::array<VkImageView, 3> attachments = { albedoImageView, normalImageView, positionImageView };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = m_SwapchainExtent.width;
+        framebufferInfo.height = m_SwapchainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(m_pDevice->GetVkDevice(), &framebufferInfo, nullptr, &m_SwapchainDeferredFramebuffers[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
 void Swapchain::CreateImages(CommandPool* pCommandPool)
 {
     VkExtent2D extent = m_SwapchainExtent;
 
-    VkFormat albedoFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    VkFormat albedoFormat = VK_FORMAT_R8G8B8A8_SRGB;
     VkFormat normalFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
     VkFormat positionFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 

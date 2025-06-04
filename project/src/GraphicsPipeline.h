@@ -10,6 +10,7 @@ class RenderPass;
 class GraphicsPipeline
 {
 public:
+	GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader, const char* fragShader, bool handlesDepth);
 	GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader, const char* fragShader);
 	GraphicsPipeline(LogicalDevice* pDevice, RenderPass* renderPass, VkDescriptorSetLayout* pDescriptorSetLayout, const char* vertShader);
 	~GraphicsPipeline();
@@ -25,6 +26,7 @@ private:
 
 	void CreatePipelineLayout(VkDescriptorSetLayout* pDescriptorSetLayout);
 	void CreateGraphicsPipeline(RenderPass* renderPass, bool isDepthOnly);
+	void CreateGraphicsPipeline(RenderPass* renderPass);
 	void CreateShaderModules(const char* vertexPath, const char* fragmentPath);
 	void CreateShaderModules(const char* vertexPath);
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);

@@ -19,10 +19,12 @@ public:
 	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void CreateFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
 	void CreateDepthFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
+	void CreateDeferredFramebuffers(VkRenderPass renderPass);
 
 	VkFormat GetSwapChainImageFormat() const { return m_SwapchainImageFormat; }
 	std::vector<VkFramebuffer> GetSwapChainFramebuffers() { return m_SwapchainFramebuffers; }
 	std::vector<VkFramebuffer> GetSwapChainDepthFramebuffers() { return m_SwapchainDepthFramebuffers; }
+	std::vector<VkFramebuffer> GetSwapChainDeferredFramebuffers() { return m_SwapchainDeferredFramebuffers; }
 	VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
 	VkSwapchainKHR GetSwapchain() const { return m_Swapchain; }
 
@@ -40,6 +42,7 @@ private:
 	std::vector<VkImageView> m_SwapchainImageViews;
 	std::vector<VkFramebuffer> m_SwapchainFramebuffers;
 	std::vector<VkFramebuffer> m_SwapchainDepthFramebuffers;
+	std::vector<VkFramebuffer> m_SwapchainDeferredFramebuffers;
 
 	// G-buffer attachments
 	std::vector<Image*> m_pGBufferAlbedoImages;

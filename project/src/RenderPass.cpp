@@ -6,15 +6,23 @@
 RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat)
 	: m_pDevice(pDevice)
 	, m_RenderPass(VK_NULL_HANDLE)
-	, m_IsDepthOnly(false)
+	, m_DepthWrite(false)
 {
 	CreateRenderPass(swapchainImageFormat, depthImageFormat);
+}
+
+RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool writeDepth)
+    : m_pDevice(pDevice)
+    , m_RenderPass(VK_NULL_HANDLE)
+    , m_DepthWrite(writeDepth)
+{
+    CreateRenderPass(swapchainImageFormat, depthImageFormat);
 }
 
 RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat)
     : m_pDevice(pDevice)
     , m_RenderPass(VK_NULL_HANDLE)
-	, m_IsDepthOnly(true)
+	, m_DepthWrite(true)
 {
     CreateDepthRenderPass(depthImageFormat);
 }
@@ -22,7 +30,7 @@ RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat)
 RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat)
 	: m_pDevice(pDevice)
 	, m_RenderPass(VK_NULL_HANDLE)
-	, m_IsDepthOnly(false)
+	, m_DepthWrite(false)
 {
 	CreateDeferredRenderPass(albedoImageFormat, normalImageFormat, positionImageFormat);
 }
@@ -53,6 +61,11 @@ void RenderPass::CreateRenderPass(VkFormat swapchainImageFormat, VkFormat depthI
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	if (m_DepthWrite)
+	{
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	}
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;

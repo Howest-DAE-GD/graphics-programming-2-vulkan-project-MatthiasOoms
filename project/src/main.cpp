@@ -90,9 +90,11 @@ private:
     RenderPass* m_pRenderPass;
     RenderPass* m_pDepthRenderPass;
     RenderPass* m_pDeferredRenderPass;
+    RenderPass* m_pTransparentRenderPass;
 	GraphicsPipeline* m_pGraphicsPipeline;
 	GraphicsPipeline* m_pDepthGraphicsPipeline;
 	GraphicsPipeline* m_pDeferredGraphicsPipeline;
+    GraphicsPipeline* m_pTransparentGraphicsPipeline;
     
 	DescriptorSetLayout* m_pDescriptorSetLayout;
 
@@ -105,7 +107,8 @@ private:
     std::vector<VkFence> m_InFlightFences;
     uint32_t m_CurrentFrame = 0;
 
-	std::vector<Model*> m_pModels;
+	std::vector<Model*> m_pOpaqueModels;
+	std::vector<Model*> m_pTransparentModels;
 
     Camera* m_pCamera;
     Timer m_Timer;
@@ -187,6 +190,7 @@ private:
 		auto normalImage = m_pSwapchain->GetGBufferNormalImages();
 		auto positionImage = m_pSwapchain->GetGBufferPositionImages();
 
+		m_pTransparentRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), true);
 		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
@@ -199,6 +203,7 @@ private:
 
     void CreateGraphicsPipeline()
     {
+		m_pTransparentGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pTransparentRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv", true);
 		m_pDeferredGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDeferredRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/deferredVert.spv", "resources/shaders/deferredFrag.spv");
 		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/depth.spv");
 		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv");
@@ -262,7 +267,7 @@ private:
 		VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         
         // Loop over all meshes and create a texture for each one
-		for (Model* model : m_pModels)
+		for (Model* model : m_pOpaqueModels)
 		{
 			if (model->GetDiffuseTexture().empty())
 			{
@@ -270,6 +275,18 @@ private:
 			}
 			// Create a texture for the model
 			model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
+            model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+        }
+
+        // Loop over all meshes and create a texture for each one
+        for (Model* model : m_pTransparentModels)
+        {
+            if (model->GetDiffuseTexture().empty())
+            {
+                continue; // Skip models without a texture path
+            }
+            // Create a texture for the model
+            model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
             model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
     }
@@ -280,10 +297,15 @@ private:
 
         for (Model* model : modelLoader.LoadModel(g_MODEL_PATH))
         {
-			m_pModels.push_back(model);
+            if (!model->IsTransparent())
+            {
+                m_pOpaqueModels.push_back(model);
+            }
+            else
+            {
+                m_pTransparentModels.push_back(model);
+            }
         }
-
-        m_pModels;
     }
 
     void CreateVertexBuffer()
@@ -298,7 +320,7 @@ private:
         uint32_t vertexOffset = 0;
         uint32_t indexOffset = 0;
 
-		for (Model* model : m_pModels)
+		for (Model* model : m_pOpaqueModels)
 		{
             model->SetVertexOffset(vertexOffset);
             model->SetFirstIndex(indexOffset);
@@ -314,6 +336,22 @@ private:
 			}
 		}
 
+        for (Model* model : m_pTransparentModels)
+        {
+            model->SetVertexOffset(vertexOffset);
+            model->SetFirstIndex(indexOffset);
+
+            vertexOffset += static_cast<uint32_t>(model->GetVertices().size());
+            indexOffset += static_cast<uint32_t>(model->GetIndices().size());
+
+            bufferSize += sizeof(model->GetVertices()[0]) * model->GetVertices().size();
+
+            for (const Vertex& vertex : model->GetVertices())
+            {
+                vertices.push_back(vertex);
+            }
+        }
+
         m_pVertexBuffer = new Buffer(bufferSize, bufferFlags, propertyFlags, vertices.data(), m_pDevice, m_pCommandPool);
     }
 
@@ -326,7 +364,17 @@ private:
         // Add the size of the vertices of each model to the total buffer size
         VkDeviceSize bufferSize = 0;
         std::vector<uint32_t> indices;
-        for (Model* model : m_pModels)
+        for (Model* model : m_pOpaqueModels)
+        {
+            bufferSize += sizeof(model->GetIndices()[0]) * model->GetIndices().size();
+
+            for (const uint32_t index : model->GetIndices())
+            {
+                indices.push_back(index);
+            }
+        }
+
+        for (Model* model : m_pTransparentModels)
         {
             bufferSize += sizeof(model->GetIndices()[0]) * model->GetIndices().size();
 
@@ -354,16 +402,21 @@ private:
 
     void CreateDescriptorPool()
     {
-		m_pDescriptorPool = new DescriptorPool(g_MAX_FRAMES_IN_FLIGHT, m_pModels.size(), m_pDevice);
+		m_pDescriptorPool = new DescriptorPool(g_MAX_FRAMES_IN_FLIGHT, m_pOpaqueModels.size() + m_pTransparentModels.size(), m_pDevice);
     }
 
     void CreateDescriptorSets()
     {
 		// Create descriptor sets for each model
-		for (Model* model : m_pModels)
+		for (Model* model : m_pOpaqueModels)
 		{
             model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetTexture()->GetImageView(), *model->GetTexture()->GetSampler()));
 		}
+
+        for (Model* model : m_pTransparentModels)
+        {
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetTexture()->GetImageView(), *model->GetTexture()->GetSampler()));
+        }
     }
 
     void CreateCommandBuffers()
@@ -488,7 +541,7 @@ private:
 
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-            for (Model* model : m_pModels)
+            for (Model* model : m_pOpaqueModels)
             {
                 uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
                 uint32_t firstIndex = model->GetFirstIndex();
@@ -540,13 +593,34 @@ private:
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
             
             // Draw all models
-            for (Model* model : m_pModels)
+            for (Model* model : m_pOpaqueModels)
             {
                 uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
                 uint32_t firstIndex = model->GetFirstIndex();
                 int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
 
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
+                vkCmdDrawIndexed(
+                    commandBuffer,
+                    indexCount,
+                    1,
+                    firstIndex,
+                    vertexOffset,
+                    0
+                );
+            }
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pTransparentGraphicsPipeline->GetGraphicsPipeline());
+
+            // Draw all models
+            for (Model* model : m_pTransparentModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pTransparentGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(
                     commandBuffer,
@@ -660,10 +734,16 @@ private:
 
     void Cleanup()
     {
-		for (Model* model : m_pModels)
+		for (Model* model : m_pOpaqueModels)
 		{
 			delete model;
             model = nullptr;
+		}
+
+		for (Model* model : m_pTransparentModels)
+		{
+			delete model;
+			model = nullptr;
 		}
 
         m_pSwapchain->CleanupSwapChain(m_pDepthImage);
@@ -681,11 +761,13 @@ private:
         delete m_pIndexBuffer;
 		delete m_pVertexBuffer;
 
-		delete m_pDeferredRenderPass;
+        delete m_pTransparentGraphicsPipeline;
+		delete m_pDeferredGraphicsPipeline;
 		delete m_pDepthGraphicsPipeline;
 		delete m_pGraphicsPipeline;
 
-		delete m_pDeferredGraphicsPipeline;
+        delete m_pTransparentRenderPass;
+		delete m_pDeferredRenderPass;
 		delete m_pDepthRenderPass;
 		delete m_pRenderPass;
 

@@ -256,6 +256,18 @@ void ModelLoader::FillDiffuseTexture(const tinygltf::Model& model, const tinyglt
     diffuseTexture = path + img.uri;
 }
 
+void ModelLoader::SetTransparent(Model& modelObj, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
+{
+    const int& materialIndex = primitive.material;
+    auto& mat = model.materials[materialIndex];
+    int texIdx = mat.pbrMetallicRoughness.baseColorTexture.index;
+
+    if (mat.alphaMode == "MASK")
+    {
+		modelObj.SetTransparent(true);
+    }
+}
+
 void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform, std::vector<Model*>& models, const std::string& modelPath)
 {
     const tinygltf::Node& node = model.nodes[nodeIndex];
@@ -309,6 +321,7 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
                 FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
                 FillIndices(model, primitive, modelObj.GetIndices());
                 FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexture());
+                SetTransparent(modelObj, model, primitive);
             }
         }
     }
