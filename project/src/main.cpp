@@ -90,7 +90,6 @@ private:
     RenderPass* m_pRenderPass;
     RenderPass* m_pDepthRenderPass;
     RenderPass* m_pDeferredRenderPass;
-    RenderPass* m_pTransparentRenderPass;
 	GraphicsPipeline* m_pGraphicsPipeline;
 	GraphicsPipeline* m_pDepthGraphicsPipeline;
 	GraphicsPipeline* m_pDeferredGraphicsPipeline;
@@ -190,7 +189,6 @@ private:
 		auto normalImage = m_pSwapchain->GetGBufferNormalImages();
 		auto positionImage = m_pSwapchain->GetGBufferPositionImages();
 
-		m_pTransparentRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), true);
 		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
@@ -203,7 +201,7 @@ private:
 
     void CreateGraphicsPipeline()
     {
-		m_pTransparentGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pTransparentRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv", true);
+		m_pTransparentGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv", true);
 		m_pDeferredGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDeferredRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/deferredVert.spv", "resources/shaders/deferredFrag.spv");
 		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/depth.spv");
 		m_pGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv");
@@ -258,6 +256,7 @@ private:
 	{
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
         m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
+		m_pSwapchain->CreateDeferredFramebuffers(m_pDeferredRenderPass->GetRenderPass());
 	}
 
     void CreateTextureImage()
@@ -359,7 +358,6 @@ private:
     {
         VkBufferUsageFlags bufferFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         VkMemoryPropertyFlags propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        //VkDeviceSize bufferSize = sizeof(m_pModel->GetIndices()[0]) * m_pModel->GetIndices().size();
 
         // Add the size of the vertices of each model to the total buffer size
         VkDeviceSize bufferSize = 0;
@@ -552,6 +550,64 @@ private:
                     &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
+            }
+
+        vkCmdEndRenderPass(commandBuffer);
+
+
+        VkRenderPassBeginInfo deferredRenderPassInfo{};
+        deferredRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        deferredRenderPassInfo.renderPass = m_pDeferredRenderPass->GetRenderPass();
+        deferredRenderPassInfo.framebuffer = m_pSwapchain->GetSwapChainDeferredFramebuffers()[imageIndex];
+
+        deferredRenderPassInfo.renderArea.offset = { 0, 0 };
+        deferredRenderPassInfo.renderArea.extent = swapChainExtent;
+
+        std::vector<VkClearValue> deferredClearValues{};
+        deferredClearValues.resize(m_pDeferredRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
+
+        deferredRenderPassInfo.clearValueCount = static_cast<uint32_t>(deferredClearValues.size());
+        deferredRenderPassInfo.pClearValues = deferredClearValues.data();
+
+        vkCmdBeginRenderPass(commandBuffer, &deferredRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pDeferredGraphicsPipeline->GetGraphicsPipeline());
+
+            VkViewport transparentViewport{};
+            transparentViewport.x = 0.0f;
+            transparentViewport.y = 0.0f;
+            transparentViewport.width = static_cast<float>(swapChainExtent.width);
+            transparentViewport.height = static_cast<float>(swapChainExtent.height);
+            transparentViewport.minDepth = 0.0f;
+            transparentViewport.maxDepth = 1.0f;
+            vkCmdSetViewport(commandBuffer, 0, 1, &transparentViewport);
+
+            VkRect2D transparentScissor{};
+            transparentScissor.offset = { 0, 0 };
+            transparentScissor.extent = swapChainExtent;
+            vkCmdSetScissor(commandBuffer, 0, 1, &transparentScissor);
+
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+            // Draw all models
+            for (Model* model : m_pOpaqueModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pDeferredGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
+                vkCmdDrawIndexed(
+                    commandBuffer,
+                    indexCount,
+                    1,
+                    firstIndex,
+                    vertexOffset,
+                    0
+                );
             }
 
         vkCmdEndRenderPass(commandBuffer);
@@ -766,7 +822,6 @@ private:
 		delete m_pDepthGraphicsPipeline;
 		delete m_pGraphicsPipeline;
 
-        delete m_pTransparentRenderPass;
 		delete m_pDeferredRenderPass;
 		delete m_pDepthRenderPass;
 		delete m_pRenderPass;

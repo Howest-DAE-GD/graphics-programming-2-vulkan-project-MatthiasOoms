@@ -371,7 +371,6 @@ void GraphicsPipeline::CreateGraphicsPipeline(RenderPass* renderPass)
     m_VertexShaderModule = VK_NULL_HANDLE;
 }
 
-
 std::vector<char> GraphicsPipeline::ReadFile(const std::string& filename)
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
