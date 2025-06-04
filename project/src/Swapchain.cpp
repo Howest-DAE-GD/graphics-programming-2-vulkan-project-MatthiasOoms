@@ -81,20 +81,6 @@ Swapchain::Swapchain(PhysicalDevice* pPhysicalDevice, LogicalDevice* pDevice, In
 
 Swapchain::~Swapchain()
 {
-    for (auto image : m_pGBufferAlbedoImages)
-    {
-        delete image;
-    }
-
-    for (auto image : m_pGBufferNormalImages)
-    {
-        delete image;
-    }
-
-    for (auto image : m_pGBufferPositionImages)
-    {
-        delete image;
-    }
 }
 
 void Swapchain::CleanupSwapChain(Image* pImage)
@@ -117,6 +103,21 @@ void Swapchain::CleanupSwapChain(Image* pImage)
     for (size_t i{}; i < m_SwapchainImageViews.size(); ++i)
     {
         vkDestroyImageView(m_pDevice->GetVkDevice(), m_SwapchainImageViews[i], nullptr);
+    }
+
+    for (auto image : m_pGBufferAlbedoImages)
+    {
+        delete image;
+    }
+
+    for (auto image : m_pGBufferNormalImages)
+    {
+        delete image;
+    }
+
+    for (auto image : m_pGBufferPositionImages)
+    {
+        delete image;
     }
 
     vkDestroySwapchainKHR(m_pDevice->GetVkDevice(), m_Swapchain, nullptr);
