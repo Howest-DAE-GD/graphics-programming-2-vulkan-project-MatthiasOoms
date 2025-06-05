@@ -194,7 +194,7 @@ private:
 		m_pCombineRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), false);
 		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat(), FindDepthFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
-		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
+		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), true);
     }
 
     void CreateDescriptorSetLayout()
@@ -624,72 +624,6 @@ private:
 
         vkCmdEndRenderPass(commandBuffer);
 
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = m_pRenderPass->GetRenderPass();
-        renderPassInfo.framebuffer = m_pSwapchain->GetSwapChainFramebuffers()[imageIndex];
-
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = swapChainExtent;
-
-        std::vector<VkClearValue> clearValues{};
-        clearValues.resize(m_pRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
-
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
-
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pGraphicsPipeline->GetGraphicsPipeline());
-
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-            
-            // Draw all models
-            for (Model* model : m_pOpaqueModels)
-            {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
-
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
-
-                vkCmdDrawIndexed(
-                    commandBuffer,
-                    indexCount,
-                    1,
-                    firstIndex,
-                    vertexOffset,
-                    0
-                );
-            }
-
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pTransparentGraphicsPipeline->GetGraphicsPipeline());
-
-			// TODO: Sort transparent models by distance from camera before drawing
-
-            // Draw all models
-            for (Model* model : m_pTransparentModels)
-            {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
-
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pTransparentGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
-
-                vkCmdDrawIndexed(
-                    commandBuffer,
-                    indexCount,
-                    1,
-                    firstIndex,
-                    vertexOffset,
-                    0
-                );
-            }
-
-        vkCmdEndRenderPass(commandBuffer);
-
 		// Transition images from color attachment to shader read only
         auto& albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
         auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
@@ -770,6 +704,51 @@ private:
                 int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
 
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pCombineGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
+                vkCmdDrawIndexed(
+                    commandBuffer,
+                    indexCount,
+                    1,
+                    firstIndex,
+                    vertexOffset,
+                    0
+                );
+            }
+
+        vkCmdEndRenderPass(commandBuffer);
+
+        VkRenderPassBeginInfo transparentRenderPassInfo{};
+        transparentRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        transparentRenderPassInfo.renderPass = m_pRenderPass->GetRenderPass();
+        transparentRenderPassInfo.framebuffer = m_pSwapchain->GetSwapChainFramebuffers()[imageIndex];
+
+        transparentRenderPassInfo.renderArea.offset = { 0, 0 };
+        transparentRenderPassInfo.renderArea.extent = swapChainExtent;
+
+        std::vector<VkClearValue> transparentClearValues{};
+        transparentClearValues.resize(m_pRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
+
+        transparentRenderPassInfo.clearValueCount = static_cast<uint32_t>(transparentClearValues.size());
+        transparentRenderPassInfo.pClearValues = transparentClearValues.data();
+
+        vkCmdBeginRenderPass(commandBuffer, &transparentRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pTransparentGraphicsPipeline->GetGraphicsPipeline());
+
+            // TODO: Sort transparent models by distance from camera before drawing
+
+            // Draw all models
+            for (Model* model : m_pTransparentModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pTransparentGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(
                     commandBuffer,
