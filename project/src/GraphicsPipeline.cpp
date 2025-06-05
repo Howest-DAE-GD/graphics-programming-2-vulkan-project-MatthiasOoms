@@ -235,7 +235,6 @@ void GraphicsPipeline::CreateGraphicsPipeline(RenderPass* renderPass)
     };
     uint32_t stageCount = 1;
 
-
     if (m_FragmentShaderModule != VK_NULL_HANDLE)
     {
         shaderStages[1] = fragShaderStageInfo;

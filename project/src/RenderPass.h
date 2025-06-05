@@ -10,7 +10,7 @@ public:
 	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat);
 	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool writeDepth);
 	RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat);
-	RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);
+	RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat, VkFormat depthImageFormat);
 	~RenderPass();
 
 	VkRenderPass GetRenderPass() const { return m_RenderPass; }
@@ -22,7 +22,7 @@ private:
 	VkRenderPass m_RenderPass;
 	void CreateRenderPass(VkFormat swapchainImageFormat, VkFormat depthImageFormat);
 	void CreateDepthRenderPass(VkFormat depthImageFormat);
-	void CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);
+	void CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);
 	void DestroyRenderPass();
 
 	bool m_DepthWrite = false;

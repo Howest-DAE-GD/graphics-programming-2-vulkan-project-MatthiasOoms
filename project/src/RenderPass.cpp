@@ -27,12 +27,12 @@ RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat)
     CreateDepthRenderPass(depthImageFormat);
 }
 
-RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat)
+RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat, VkFormat depthImageFormat)
 	: m_pDevice(pDevice)
 	, m_RenderPass(VK_NULL_HANDLE)
 	, m_DepthWrite(false)
 {
-	CreateDeferredRenderPass(albedoImageFormat, normalImageFormat, positionImageFormat);
+	CreateDeferredRenderPass(depthImageFormat, albedoImageFormat, normalImageFormat, positionImageFormat);
 }
 
 RenderPass::~RenderPass()
@@ -153,7 +153,7 @@ void RenderPass::CreateDepthRenderPass(VkFormat depthImageFormat)
     }
 }
 
-void RenderPass::CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat)
+void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat)
 {
     VkAttachmentDescription albedoAttachment{};
     albedoAttachment.format = albedoImageFormat;
@@ -163,7 +163,7 @@ void RenderPass::CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat n
     albedoAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     albedoAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     albedoAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    albedoAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    albedoAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentReference albedoAttachmentRef{};
     albedoAttachmentRef.attachment = 0;
@@ -177,7 +177,7 @@ void RenderPass::CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat n
     normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     normalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    normalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    normalAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentReference normalAttachmentRef{};
     normalAttachmentRef.attachment = 1;
@@ -191,11 +191,25 @@ void RenderPass::CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat n
     positionAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     positionAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     positionAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    positionAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    positionAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference positionAttachmentRef{};
 	positionAttachmentRef.attachment = 2;
     positionAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = depthImageFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 3;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     std::array<VkAttachmentReference, 3> colorAttachmentRefs = { albedoAttachmentRef, normalAttachmentRef, positionAttachmentRef };
 
@@ -205,15 +219,17 @@ void RenderPass::CreateDeferredRenderPass(VkFormat albedoImageFormat, VkFormat n
 	m_AttachmentCount = subpass.colorAttachmentCount;
     subpass.pColorAttachments = colorAttachmentRefs.data();
 
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-    std::array<VkAttachmentDescription, 3> attachments = { albedoAttachment, normalAttachment, positionAttachment };
+    VkSubpassDependency dependency{};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+    std::array<VkAttachmentDescription, 4> attachments = { albedoAttachment, normalAttachment, positionAttachment, depthAttachment };
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

@@ -185,11 +185,11 @@ private:
 
     void CreateRenderPass()
     {
-        auto albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
-		auto normalImage = m_pSwapchain->GetGBufferNormalImages();
-		auto positionImage = m_pSwapchain->GetGBufferPositionImages();
+        auto& albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
+		auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
+		auto& positionImage = m_pSwapchain->GetGBufferPositionImages();
 
-		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat());
+		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat(), FindDepthFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
     }
@@ -256,7 +256,7 @@ private:
 	{
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
         m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
-		m_pSwapchain->CreateDeferredFramebuffers(m_pDeferredRenderPass->GetRenderPass());
+		m_pSwapchain->CreateDeferredFramebuffers(m_pDeferredRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
 	}
 
     void CreateTextureImage()
@@ -519,19 +519,19 @@ private:
 
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pDepthGraphicsPipeline->GetGraphicsPipeline());
 
-            VkViewport depthViewport{};
-            depthViewport.x = 0.0f;
-            depthViewport.y = 0.0f;
-            depthViewport.width = static_cast<float>(swapChainExtent.width);
-            depthViewport.height = static_cast<float>(swapChainExtent.height);
-            depthViewport.minDepth = 0.0f;
-            depthViewport.maxDepth = 1.0f;
-            vkCmdSetViewport(commandBuffer, 0, 1, &depthViewport);
+            VkViewport viewport{};
+            viewport.x = 0.0f;
+            viewport.y = 0.0f;
+            viewport.width = static_cast<float>(swapChainExtent.width);
+            viewport.height = static_cast<float>(swapChainExtent.height);
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-            VkRect2D depthScissor{};
-            depthScissor.offset = { 0, 0 };
-            depthScissor.extent = swapChainExtent;
-            vkCmdSetScissor(commandBuffer, 0, 1, &depthScissor);
+            VkRect2D scissor{};
+            scissor.offset = { 0, 0 };
+            scissor.extent = swapChainExtent;
+            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
             VkBuffer vertexBuffers[] = { m_pVertexBuffer->GetBuffer() };
             VkDeviceSize offsets[] = { 0 };
@@ -554,7 +554,6 @@ private:
 
         vkCmdEndRenderPass(commandBuffer);
 
-
         VkRenderPassBeginInfo deferredRenderPassInfo{};
         deferredRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         deferredRenderPassInfo.renderPass = m_pDeferredRenderPass->GetRenderPass();
@@ -564,7 +563,7 @@ private:
         deferredRenderPassInfo.renderArea.extent = swapChainExtent;
 
         std::vector<VkClearValue> deferredClearValues{};
-        deferredClearValues.resize(m_pDeferredRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
+        deferredClearValues.resize(m_pDeferredRenderPass->GetAttachmentCount(), { 1.0f, 0.0f, 0.0f, 1.0f });
 
         deferredRenderPassInfo.clearValueCount = static_cast<uint32_t>(deferredClearValues.size());
         deferredRenderPassInfo.pClearValues = deferredClearValues.data();
@@ -572,20 +571,6 @@ private:
         vkCmdBeginRenderPass(commandBuffer, &deferredRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pDeferredGraphicsPipeline->GetGraphicsPipeline());
-
-            VkViewport transparentViewport{};
-            transparentViewport.x = 0.0f;
-            transparentViewport.y = 0.0f;
-            transparentViewport.width = static_cast<float>(swapChainExtent.width);
-            transparentViewport.height = static_cast<float>(swapChainExtent.height);
-            transparentViewport.minDepth = 0.0f;
-            transparentViewport.maxDepth = 1.0f;
-            vkCmdSetViewport(commandBuffer, 0, 1, &transparentViewport);
-
-            VkRect2D transparentScissor{};
-            transparentScissor.offset = { 0, 0 };
-            transparentScissor.extent = swapChainExtent;
-            vkCmdSetScissor(commandBuffer, 0, 1, &transparentScissor);
 
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
@@ -629,20 +614,6 @@ private:
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pGraphicsPipeline->GetGraphicsPipeline());
-
-            VkViewport viewport{};
-            viewport.x = 0.0f;
-            viewport.y = 0.0f;
-            viewport.width = static_cast<float>(swapChainExtent.width);
-            viewport.height = static_cast<float>(swapChainExtent.height);
-            viewport.minDepth = 0.0f;
-            viewport.maxDepth = 1.0f;
-            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-            VkRect2D scissor{};
-            scissor.offset = { 0, 0 };
-            scissor.extent = swapChainExtent;
-            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 

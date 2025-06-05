@@ -206,7 +206,7 @@ void Swapchain::CreateDepthFramebuffers(VkRenderPass renderPass, VkImageView dep
     }
 }
 
-void Swapchain::CreateDeferredFramebuffers(VkRenderPass renderPass)
+void Swapchain::CreateDeferredFramebuffers(VkRenderPass renderPass, VkImageView depthImageView)
 {
     m_SwapchainDeferredFramebuffers.resize(m_SwapchainImageViews.size());
     for (size_t i{}; i < m_SwapchainImageViews.size(); ++i)
@@ -215,7 +215,7 @@ void Swapchain::CreateDeferredFramebuffers(VkRenderPass renderPass)
 		VkImageView normalImageView = *m_pGBufferNormalImages[i]->GetImageView();
 		VkImageView positionImageView = *m_pGBufferPositionImages[i]->GetImageView();
 
-        std::array<VkImageView, 3> attachments = { albedoImageView, normalImageView, positionImageView };
+        std::array<VkImageView, 4> attachments = { albedoImageView, normalImageView, positionImageView, depthImageView };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
