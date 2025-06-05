@@ -1,11 +1,11 @@
 #include "DescriptorSets.h"
 #include "LogicalDevice.h"
 #include "Buffer.h"
-#include "Structs.h"
+#include "Model.h"
 #include <stdexcept>
 #include <array>
 
-DescriptorSets::DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, VkDescriptorSetLayout* descriptorSetLayout, VkDescriptorPool* descriptorPool, std::vector<Buffer*> uniformBuffers, VkImageView textureImageView, VkSampler textureSampler)
+DescriptorSets::DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, VkDescriptorSetLayout* descriptorSetLayout, VkDescriptorPool* descriptorPool, std::vector<Buffer*> uniformBuffers, Model* model)
 	: m_pDevice(pDevice)
 {
     std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, *descriptorSetLayout);
@@ -30,10 +30,15 @@ DescriptorSets::DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, Vk
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = textureImageView;
-        imageInfo.sampler = textureSampler;
+		imageInfo.imageView = *model->GetDiffuseTexture()->GetImageView();
+		imageInfo.sampler = *model->GetDiffuseTexture()->GetSampler();
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+		VkDescriptorImageInfo normalImageInfo{};
+		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normalImageInfo.imageView = *model->GetNormalTexture()->GetImageView();
+		normalImageInfo.sampler = *model->GetNormalTexture()->GetSampler();
+
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = m_DescriptorSets[i];
         descriptorWrites[0].dstBinding = 0;
@@ -49,6 +54,14 @@ DescriptorSets::DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, Vk
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pImageInfo = &imageInfo;
+
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = m_DescriptorSets[i];
+		descriptorWrites[2].dstBinding = 2;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pImageInfo = &normalImageInfo;
 
         vkUpdateDescriptorSets(m_pDevice->GetVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }

@@ -126,10 +126,11 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
     // Find attributes in the primitive
     auto posIt = primitive.attributes.find("POSITION");
 	auto normIt = primitive.attributes.find("NORMAL");
+	auto tanIt = primitive.attributes.find("TANGENT");
     auto colIt = primitive.attributes.find("COLOR_0");
     auto texIt = primitive.attributes.find("TEXCOORD_0");
 
-    const float* posData = nullptr, * normData = nullptr, * texData = nullptr, * colData = nullptr;
+    const float* posData = nullptr, * normData = nullptr, * tanData = nullptr, * texData = nullptr, * colData = nullptr;
     size_t vertexCount = 0;
 
     // Extract POSITION data
@@ -150,6 +151,15 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
 		const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
 		const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
 		normData = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+	}
+
+	// Extract TANGENT data
+	if (tanIt != primitive.attributes.end())
+	{
+		const tinygltf::Accessor& accessor = gltfModel.accessors[tanIt->second];
+		const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+		const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+		tanData = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
 	}
 
     // Extract COLOR data
@@ -187,6 +197,11 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
 			glm::vec4 norm = glm::vec4(normData[i * 3 + 0], normData[i * 3 + 1], normData[i * 3 + 2], 0.0f);
 			v.normal = glm::normalize(glm::vec3(transform * norm));
 		}
+        if (tanData)
+        {
+			glm::vec4 tan = glm::vec4(tanData[i * 4 + 0], tanData[i * 4 + 1], tanData[i * 4 + 2], tanData[i * 4 + 3]);
+			v.tangent = glm::normalize(glm::vec3(transform * tan));
+        }
         if (colData) 
         {
             v.color = glm::vec4(colData[i * 4 + 0], colData[i * 4 + 1], colData[i * 4 + 2], colData[i * 4 + 3]);
@@ -283,6 +298,7 @@ void ModelLoader::FillNormalTexture(const tinygltf::Model& model, const tinygltf
     auto& mat = model.materials[materialIndex];
 	int texIdx = mat.normalTexture.index;
 
+	// If there is no normal texture
     if (texIdx < 0)
     {
         return;
@@ -359,6 +375,7 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
                 FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
                 FillIndices(model, primitive, modelObj.GetIndices());
                 FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexturePath());
+				FillNormalTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetNormalTexturePath());
                 SetTransparent(modelObj, model, primitive);
             }
         }

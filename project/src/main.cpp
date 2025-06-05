@@ -275,6 +275,17 @@ private:
 			// Create a texture for the model
 			model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
             model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+
+            if (model->GetNormalTexturePath().empty())
+            {
+                // Create a default normal for the model
+                model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
+                model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+                continue;
+            }
+            // Create a normal for the model
+            model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, model->GetNormalTexturePath()));
+            model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
 
         // Loop over all meshes and create a texture for each one
@@ -287,6 +298,17 @@ private:
             // Create a texture for the model
             model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
             model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+
+            if (model->GetNormalTexturePath().empty())
+            {
+                // Create a default normal for the model
+                model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
+                model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+                continue;
+            }
+            // Create a normal for the model
+            model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, model->GetNormalTexturePath()));
+            model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
     }
 
@@ -408,12 +430,12 @@ private:
 		// Create descriptor sets for each model
 		for (Model* model : m_pOpaqueModels)
 		{
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetDiffuseTexture()->GetImageView(), *model->GetDiffuseTexture()->GetSampler()));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model));
 		}
 
         for (Model* model : m_pTransparentModels)
         {
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetDiffuseTexture()->GetImageView(), *model->GetDiffuseTexture()->GetSampler()));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model));
         }
     }
 
@@ -564,7 +586,7 @@ private:
         deferredRenderPassInfo.renderArea.extent = swapChainExtent;
 
         std::vector<VkClearValue> deferredClearValues{};
-        deferredClearValues.resize(m_pDeferredRenderPass->GetAttachmentCount(), { 1.0f, 0.0f, 0.0f, 1.0f });
+        deferredClearValues.resize(m_pDeferredRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
 
         deferredRenderPassInfo.clearValueCount = static_cast<uint32_t>(deferredClearValues.size());
         deferredRenderPassInfo.pClearValues = deferredClearValues.data();
@@ -640,6 +662,8 @@ private:
             }
 
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pTransparentGraphicsPipeline->GetGraphicsPipeline());
+
+			// TODO: Sort transparent models by distance from camera before drawing
 
             // Draw all models
             for (Model* model : m_pTransparentModels)

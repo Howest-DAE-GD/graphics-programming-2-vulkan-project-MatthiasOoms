@@ -94,7 +94,7 @@ struct Vertex
 
     bool operator==(const Vertex& other) const
     {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal;
+        return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal && tangent == other.tangent;
     }
 };
 
@@ -104,9 +104,10 @@ namespace std
     {
         size_t operator()(Vertex const& vertex) const
         {
-			return ((hash<glm::vec3>()(vertex.pos)^
-				(hash<glm::vec3>()(vertex.normal) << 1)) >> 1)^
-				(hash<glm::vec3>()(vertex.color) << 1)^
+			return ((hash<glm::vec3>()(vertex.pos) ^
+				(hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+				(hash<glm::vec3>()(vertex.tangent) << 1) ^
+				(hash<glm::vec3>()(vertex.color) << 1) ^
 				(hash<glm::vec2>()(vertex.texCoord) << 1);
         }
     };

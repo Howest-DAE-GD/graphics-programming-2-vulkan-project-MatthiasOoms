@@ -26,6 +26,10 @@ void main()
     fragNormal = normalize(normalMatrix * inNormal);
     fragTangent = normalize(normalMatrix * inTangent.xyz);
     fragBitangent = normalize(cross(fragNormal, fragTangent) * inTangent.w);
+    if (inTangent.w == 0.0) 
+    {
+        fragBitangent = normalize(cross(fragNormal, fragTangent));
+    }
     fragTexCoord = inTexCoord;
     gl_Position = ubo.proj * ubo.view * vec4(fragPosition, 1.0);
 }

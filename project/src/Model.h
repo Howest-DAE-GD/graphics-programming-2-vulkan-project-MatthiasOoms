@@ -18,6 +18,9 @@ public:
 		delete m_pTexture;
 		m_pTexture = nullptr;
 
+		delete m_pNormal;
+		m_pNormal = nullptr;
+
 		delete m_pDescriptorSets;
 		m_pDescriptorSets = nullptr;
     };

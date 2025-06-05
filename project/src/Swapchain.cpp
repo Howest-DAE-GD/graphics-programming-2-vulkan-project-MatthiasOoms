@@ -238,8 +238,8 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
     VkExtent2D extent = m_SwapchainExtent;
 
     VkFormat albedoFormat = VK_FORMAT_R8G8B8A8_SRGB;
-    VkFormat normalFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-    VkFormat positionFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat normalFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    VkFormat positionFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
     size_t count = m_SwapchainImages.size();
 
