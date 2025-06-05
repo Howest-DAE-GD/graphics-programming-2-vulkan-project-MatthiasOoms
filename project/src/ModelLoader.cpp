@@ -125,6 +125,7 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
 {
     // Find attributes in the primitive
     auto posIt = primitive.attributes.find("POSITION");
+	auto normIt = primitive.attributes.find("NORMAL");
     auto colIt = primitive.attributes.find("COLOR_0");
     auto texIt = primitive.attributes.find("TEXCOORD_0");
 
@@ -141,6 +142,15 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
         posData = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
         vertexCount = accessor.count;
     }
+
+	// Extract NORMAL data
+	if (normIt != primitive.attributes.end())
+	{
+		const tinygltf::Accessor& accessor = gltfModel.accessors[normIt->second];
+		const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+		const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+		normData = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+	}
 
     // Extract COLOR data
     if (colIt != primitive.attributes.end())
@@ -172,6 +182,11 @@ void ModelLoader::FillVertices(const tinygltf::Model& gltfModel, const tinygltf:
             glm::vec4 pos = glm::vec4(posData[i * 3 + 0], posData[i * 3 + 1], posData[i * 3 + 2], 1.0f);
             v.pos = glm::vec3(transform * pos);
         }
+		if (normData)
+		{
+			glm::vec4 norm = glm::vec4(normData[i * 3 + 0], normData[i * 3 + 1], normData[i * 3 + 2], 0.0f);
+			v.normal = glm::normalize(glm::vec3(transform * norm));
+		}
         if (colData) 
         {
             v.color = glm::vec4(colData[i * 4 + 0], colData[i * 4 + 1], colData[i * 4 + 2], colData[i * 4 + 3]);

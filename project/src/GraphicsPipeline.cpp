@@ -87,17 +87,17 @@ void GraphicsPipeline::CreateGraphicsPipeline(RenderPass* renderPass, bool isDep
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
 
 	// Fill with depth attributes if this is a depth-only pipeline
-    auto attributeDescriptions = Vertex::GetDepthAttributeDescriptions();
-    auto attributeDescription = Vertex::GetAttributeDescriptions();
+    auto depthAttributeDescription = Vertex::GetDepthAttributeDescriptions();
+    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
 
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(depthAttributeDescription.size());
+    vertexInputInfo.pVertexAttributeDescriptions = depthAttributeDescription.data(); // Optional
 
 	// Overwrite if this is not a depth-only pipeline
     if (m_FragmentShaderModule != VK_NULL_HANDLE)
     {
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data(); // Optional
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
     }
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
