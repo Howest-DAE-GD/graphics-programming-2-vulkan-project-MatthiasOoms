@@ -8,8 +8,8 @@ class LogicalDevice;
 class RenderPass
 {
 public:
-	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool loadValues = false);
 	RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat);
+	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool loadValues = false);
 	RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat, VkFormat depthImageFormat);
 	~RenderPass();
 
