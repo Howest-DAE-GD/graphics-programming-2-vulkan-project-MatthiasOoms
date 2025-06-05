@@ -271,6 +271,29 @@ void ModelLoader::FillDiffuseTexture(const tinygltf::Model& model, const tinyglt
     diffuseTexture = path + img.uri;
 }
 
+void ModelLoader::FillNormalTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& normalTexture)
+{
+    const int& materialIndex = primitive.material;
+
+    if (materialIndex < 0)
+    {
+        return;
+    }
+
+    auto& mat = model.materials[materialIndex];
+	int texIdx = mat.normalTexture.index;
+
+    if (texIdx < 0)
+    {
+        return;
+    }
+
+    const tinygltf::Texture& text = model.textures[texIdx];
+    const tinygltf::Image& img = model.images[text.source];
+
+    normalTexture = path + img.uri;
+}
+
 void ModelLoader::SetTransparent(Model& modelObj, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
 {
     const int& materialIndex = primitive.material;
@@ -335,7 +358,7 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
 
                 FillVertices(model, primitive, modelObj.GetVertices(), globalTransform);
                 FillIndices(model, primitive, modelObj.GetIndices());
-                FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexture());
+                FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexturePath());
                 SetTransparent(modelObj, model, primitive);
             }
         }

@@ -20,7 +20,8 @@ public:
 private:
 	void FillVertices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices, const glm::mat4& transform);
 	void FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indices);
-	void FillDiffuseTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& diffuseTextures);
+	void FillDiffuseTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& diffuseTexture);
+	void FillNormalTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& normalTexture);
 	void SetTransparent(Model& modelObj, const tinygltf::Model& model, const tinygltf::Primitive& primitive);
 
 	void ProcessNode(const tinygltf::Model& model, int nodeIdx, const glm::mat4& parentTransform, std::vector<Model*>& models, const std::string& modelPath);

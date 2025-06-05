@@ -268,25 +268,25 @@ private:
         // Loop over all meshes and create a texture for each one
 		for (Model* model : m_pOpaqueModels)
 		{
-			if (model->GetDiffuseTexture().empty())
+			if (model->GetDiffuseTexturePath().empty())
 			{
 				continue; // Skip models without a texture path
 			}
 			// Create a texture for the model
-			model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
-            model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+			model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
+            model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
 
         // Loop over all meshes and create a texture for each one
         for (Model* model : m_pTransparentModels)
         {
-            if (model->GetDiffuseTexture().empty())
+            if (model->GetDiffuseTexturePath().empty())
             {
                 continue; // Skip models without a texture path
             }
             // Create a texture for the model
-            model->SetTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexture()));
-            model->GetTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
+            model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
         }
     }
 
@@ -408,12 +408,12 @@ private:
 		// Create descriptor sets for each model
 		for (Model* model : m_pOpaqueModels)
 		{
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetTexture()->GetImageView(), *model->GetTexture()->GetSampler()));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetDiffuseTexture()->GetImageView(), *model->GetDiffuseTexture()->GetSampler()));
 		}
 
         for (Model* model : m_pTransparentModels)
         {
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetTexture()->GetImageView(), *model->GetTexture()->GetSampler()));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, *model->GetDiffuseTexture()->GetImageView(), *model->GetDiffuseTexture()->GetSampler()));
         }
     }
 
@@ -465,6 +465,7 @@ private:
 		CreateDepthImage();
         m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
 		m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
+		m_pSwapchain->CreateDeferredFramebuffers(m_pDeferredRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
     }
 
     void CleanupSwapChain()
