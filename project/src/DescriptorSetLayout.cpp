@@ -38,7 +38,25 @@ void DescriptorSetLayout::CreateDescriptorSetLayout()
     normalSamplerLayoutBinding.pImmutableSamplers = nullptr;
     normalSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, normalSamplerLayoutBinding };
+    VkDescriptorSetLayoutBinding albedoBinding{};
+    albedoBinding.binding = 3;
+    albedoBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    albedoBinding.descriptorCount = 1;
+    albedoBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding normalBinding{};
+    normalBinding.binding = 4;
+    normalBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    normalBinding.descriptorCount = 1;
+    normalBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding positionBinding{};
+    positionBinding.binding = 5;
+    positionBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    positionBinding.descriptorCount = 1;
+    positionBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 6> bindings = { uboLayoutBinding, samplerLayoutBinding, normalSamplerLayoutBinding, albedoBinding, normalBinding, positionBinding };
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());

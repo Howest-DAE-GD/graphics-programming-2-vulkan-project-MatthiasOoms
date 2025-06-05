@@ -1,12 +1,12 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include "Texture.h"
 
 class LogicalDevice;
 class PhysicalDevice;
 class CommandPool;
 class Instance;
-class Image;
 
 class Swapchain
 {
@@ -28,9 +28,9 @@ public:
 	VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
 	VkSwapchainKHR GetSwapchain() const { return m_Swapchain; }
 
-	std::vector<Image*>& GetGBufferAlbedoImages() { return m_pGBufferAlbedoImages; }
-	std::vector<Image*>& GetGBufferNormalImages() { return m_pGBufferNormalImages; }
-	std::vector<Image*>& GetGBufferPositionImages() { return m_pGBufferPositionImages; }
+	std::vector<Texture*>& GetGBufferAlbedoImages() { return m_pGBufferAlbedoImages; }
+	std::vector<Texture*>& GetGBufferNormalImages() { return m_pGBufferNormalImages; }
+	std::vector<Texture*>& GetGBufferPositionImages() { return m_pGBufferPositionImages; }
 
 private:
 	void CreateImages(CommandPool* pCommandPool);
@@ -45,9 +45,9 @@ private:
 	std::vector<VkFramebuffer> m_SwapchainDeferredFramebuffers;
 
 	// G-buffer attachments
-	std::vector<Image*> m_pGBufferAlbedoImages;
-	std::vector<Image*> m_pGBufferNormalImages;
-	std::vector<Image*> m_pGBufferPositionImages;
+	std::vector<Texture*> m_pGBufferAlbedoImages;
+	std::vector<Texture*> m_pGBufferNormalImages;
+	std::vector<Texture*> m_pGBufferPositionImages;
 
 	LogicalDevice* m_pDevice;
 	PhysicalDevice* m_pPhysicalDevice;

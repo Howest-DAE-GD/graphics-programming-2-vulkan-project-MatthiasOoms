@@ -29,6 +29,12 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+struct PushConstants
+{
+    glm::vec2 screenSize;
+};
+
+
 struct Vertex
 {
     glm::vec3 pos;

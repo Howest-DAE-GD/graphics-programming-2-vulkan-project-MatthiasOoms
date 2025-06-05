@@ -8,6 +8,11 @@
 #include "Buffer.h"
 #include <stdexcept>
 
+Texture::Texture(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, VkImageAspectFlagBits aspects, VkImageLayout oldLayout, VkImageLayout newLayout)
+    : Image(pDevice, pCommandPool, swapchainExtent, imageFormat, tiling, usage, properties, aspects, oldLayout, newLayout)
+{
+}
+
 // Do not call parent constructor
 Texture::Texture(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, std::string texturePath)
     : Image()

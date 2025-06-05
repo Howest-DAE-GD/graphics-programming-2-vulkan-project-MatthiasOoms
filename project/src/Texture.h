@@ -9,6 +9,7 @@ class CommandPool;
 class Texture final : public Image
 {
 public:
+	Texture(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, VkImageAspectFlagBits aspects, VkImageLayout oldLayout, VkImageLayout newLayout);
 	Texture(LogicalDevice* pDevice, CommandPool* pCommandPool, VkExtent2D swapchainExtent, VkFormat imageFormat, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits properties, const std::string texturePath);
 	~Texture();
 	void CreateSampler(VkPhysicalDevice pPhysicalDevice);

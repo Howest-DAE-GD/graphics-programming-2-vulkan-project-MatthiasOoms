@@ -17,6 +17,8 @@ public:
 
 	virtual VkFormat* GetImageFormat() { return &m_ImageFormat; }
 
+	virtual void TransitionImageLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
 protected:
 	LogicalDevice* m_pDevice;
 	CommandPool* m_pCommandPool;
@@ -27,6 +29,5 @@ protected:
 
 	virtual void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 	virtual VkImageView CreateImageView(VkFormat format, VkImageAspectFlags aspectFlags);
-	virtual void TransitionImageLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	virtual bool HasStencilComponent(VkFormat format);
 };

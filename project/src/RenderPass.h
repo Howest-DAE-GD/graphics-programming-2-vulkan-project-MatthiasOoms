@@ -1,14 +1,15 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 class LogicalDevice;
 
 class RenderPass
 {
 public:
-	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat);
 	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool writeDepth);
+	RenderPass(LogicalDevice* pDevice, VkFormat swapchainImageFormat, VkFormat depthImageFormat);
 	RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat);
 	RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat, VkFormat depthImageFormat);
 	~RenderPass();
@@ -20,6 +21,7 @@ public:
 private:
 	LogicalDevice* m_pDevice;
 	VkRenderPass m_RenderPass;
+	void CreateRenderPass(VkFormat swapchainImageFormat, VkFormat depthImageFormat, bool loadValues);
 	void CreateRenderPass(VkFormat swapchainImageFormat, VkFormat depthImageFormat);
 	void CreateDepthRenderPass(VkFormat depthImageFormat);
 	void CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat);

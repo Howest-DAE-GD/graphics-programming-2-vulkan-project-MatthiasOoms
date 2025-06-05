@@ -90,10 +90,12 @@ private:
     RenderPass* m_pRenderPass;
     RenderPass* m_pDepthRenderPass;
     RenderPass* m_pDeferredRenderPass;
+    RenderPass* m_pCombineRenderPass;
 	GraphicsPipeline* m_pGraphicsPipeline;
 	GraphicsPipeline* m_pDepthGraphicsPipeline;
 	GraphicsPipeline* m_pDeferredGraphicsPipeline;
     GraphicsPipeline* m_pTransparentGraphicsPipeline;
+    GraphicsPipeline* m_pCombineGraphicsPipeline;
     
 	DescriptorSetLayout* m_pDescriptorSetLayout;
 
@@ -189,6 +191,7 @@ private:
 		auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
 		auto& positionImage = m_pSwapchain->GetGBufferPositionImages();
 
+		m_pCombineRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), false);
 		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat(), FindDepthFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat());
@@ -201,6 +204,7 @@ private:
 
     void CreateGraphicsPipeline()
     {
+		m_pCombineGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pCombineRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/combineVert.spv", "resources/shaders/combineFrag.spv");
 		m_pTransparentGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/vert.spv", "resources/shaders/frag.spv", true);
 		m_pDeferredGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDeferredRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/deferredVert.spv", "resources/shaders/deferredFrag.spv");
 		m_pDepthGraphicsPipeline = new GraphicsPipeline(m_pDevice, m_pDepthRenderPass, m_pDescriptorSetLayout->GetDescriptorSetLayout(), "resources/shaders/depth.spv");
@@ -430,12 +434,12 @@ private:
 		// Create descriptor sets for each model
 		for (Model* model : m_pOpaqueModels)
 		{
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferPositionImages()[0]));
 		}
 
         for (Model* model : m_pTransparentModels)
         {
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model));
+            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferPositionImages()[0]));
         }
     }
 
@@ -628,8 +632,8 @@ private:
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = swapChainExtent;
 
-        std::array<VkClearValue, 1> clearValues{};
-        clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+        std::vector<VkClearValue> clearValues{};
+        clearValues.resize(m_pRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
@@ -686,10 +690,169 @@ private:
 
         vkCmdEndRenderPass(commandBuffer);
 
+		// Transition images from color attachment to shader read only
+        auto& albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
+        auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
+        auto& positionImage = m_pSwapchain->GetGBufferPositionImages();
+
+        // Transition G-buffer images to SHADER_READ_ONLY_OPTIMAL
+        for (size_t i = 0; i < albedoImage.size(); ++i)
+        {
+            InsertImageMemoryBarrier(
+                commandBuffer,
+                *albedoImage[i]->GetImage(),
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+            InsertImageMemoryBarrier(
+                commandBuffer,
+                *normalImage[i]->GetImage(),
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+            InsertImageMemoryBarrier(
+                commandBuffer,
+                *positionImage[i]->GetImage(),
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        }
+
+        VkRenderPassBeginInfo combineRenderPassInfo{};
+        combineRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        combineRenderPassInfo.renderPass = m_pCombineRenderPass->GetRenderPass();
+        combineRenderPassInfo.framebuffer = m_pSwapchain->GetSwapChainFramebuffers()[imageIndex];
+
+        combineRenderPassInfo.renderArea.offset = { 0, 0 };
+        combineRenderPassInfo.renderArea.extent = swapChainExtent;
+
+        std::vector<VkClearValue> combinedClearValues{};
+        combinedClearValues.resize(m_pCombineRenderPass->GetAttachmentCount(), { 0.0f, 0.0f, 0.0f, 1.0f });
+
+        combineRenderPassInfo.clearValueCount = static_cast<uint32_t>(combinedClearValues.size());
+        combineRenderPassInfo.pClearValues = combinedClearValues.data();
+
+        vkCmdBeginRenderPass(commandBuffer, &combineRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *m_pCombineGraphicsPipeline->GetGraphicsPipeline());
+
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+            PushConstants pc = { glm::vec2(swapChainExtent.width, swapChainExtent.height) };
+
+            vkCmdPushConstants(
+                commandBuffer,
+                m_pCombineGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(),
+                VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                sizeof(PushConstants),
+                &pc
+            );
+
+            // Draw all models
+            for (Model* model : m_pOpaqueModels)
+            {
+                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
+                uint32_t firstIndex = model->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pCombineGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+
+                vkCmdDrawIndexed(
+                    commandBuffer,
+                    indexCount,
+                    1,
+                    firstIndex,
+                    vertexOffset,
+                    0
+                );
+            }
+
+        vkCmdEndRenderPass(commandBuffer);
+
+		// Transition G-buffer images to COLOR_ATTACHMENT_OPTIMAL
+        for (size_t i = 0; i < albedoImage.size(); ++i)
+        {
+			InsertImageMemoryBarrier(
+				commandBuffer,
+				*albedoImage[i]->GetImage(),
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+			InsertImageMemoryBarrier(
+				commandBuffer,
+				*normalImage[i]->GetImage(),
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+			InsertImageMemoryBarrier(
+				commandBuffer,
+				*positionImage[i]->GetImage(),
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        }
+
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to record command buffer!");
         }
+    }
+
+    void InsertImageMemoryBarrier(
+        VkCommandBuffer commandBuffer,
+        VkImage image,
+        VkAccessFlags srcAccessMask,
+        VkAccessFlags dstAccessMask,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        VkPipelineStageFlags srcStageMask,
+        VkPipelineStageFlags dstStageMask)
+    {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        barrier.srcAccessMask = srcAccessMask;
+        barrier.dstAccessMask = dstAccessMask;
+        barrier.image = image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            srcStageMask, dstStageMask,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
     }
 
     void DrawFrame()
@@ -813,11 +976,13 @@ private:
         delete m_pIndexBuffer;
 		delete m_pVertexBuffer;
 
+		delete m_pCombineGraphicsPipeline;
         delete m_pTransparentGraphicsPipeline;
 		delete m_pDeferredGraphicsPipeline;
 		delete m_pDepthGraphicsPipeline;
 		delete m_pGraphicsPipeline;
 
+		delete m_pCombineRenderPass;
 		delete m_pDeferredRenderPass;
 		delete m_pDepthRenderPass;
 		delete m_pRenderPass;

@@ -3,7 +3,6 @@
 #include "PhysicalDevice.h"
 #include "CommandPool.h"
 #include "Instance.h"
-#include "Image.h"
 #include <stdexcept>
 #include <array>
 
@@ -110,17 +109,17 @@ void Swapchain::CleanupSwapChain(Image* pImage)
         vkDestroyImageView(m_pDevice->GetVkDevice(), m_SwapchainImageViews[i], nullptr);
     }
 
-    for (auto image : m_pGBufferAlbedoImages)
+    for (Texture* image : m_pGBufferAlbedoImages)
     {
         delete image;
     }
 
-    for (auto image : m_pGBufferNormalImages)
+    for (Texture* image : m_pGBufferNormalImages)
     {
         delete image;
     }
 
-    for (auto image : m_pGBufferPositionImages)
+    for (Texture* image : m_pGBufferPositionImages)
     {
         delete image;
     }
@@ -248,7 +247,7 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
     m_pGBufferPositionImages.resize(count);
 
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-    VkImageUsageFlagBits usage = VkImageUsageFlagBits(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+    VkImageUsageFlagBits usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 	VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -256,7 +255,7 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
 
     for (size_t i = 0; i < count; ++i)
     {
-        m_pGBufferAlbedoImages[i] = new Image{
+        m_pGBufferAlbedoImages[i] = new Texture{
             m_pDevice, pCommandPool, extent, albedoFormat,
             tiling,
             usage,
@@ -265,8 +264,9 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
             oldLayout,
 			newLayout
         };
+		m_pGBufferAlbedoImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
 
-        m_pGBufferNormalImages[i] = new Image(
+        m_pGBufferNormalImages[i] = new Texture(
             m_pDevice, pCommandPool, extent, normalFormat,
             tiling,
             usage,
@@ -275,8 +275,9 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
 			oldLayout,
 			newLayout
         );
+        m_pGBufferNormalImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
 
-        m_pGBufferPositionImages[i] = new Image(
+        m_pGBufferPositionImages[i] = new Texture(
             m_pDevice, pCommandPool, extent, positionFormat,
             tiling,
             usage,
@@ -285,5 +286,6 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
 			oldLayout,
 			newLayout
         );
+        m_pGBufferPositionImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
     }
 }
