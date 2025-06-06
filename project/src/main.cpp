@@ -189,10 +189,10 @@ private:
     {
         auto& albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
 		auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
-		auto& positionImage = m_pSwapchain->GetGBufferPositionImages();
+		auto& metalRoughImage = m_pSwapchain->GetGBufferMetalRoughImages();
 
 		m_pCombineRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), false);
-		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *positionImage[0]->GetImageFormat(), FindDepthFormat());
+		m_pDeferredRenderPass = new RenderPass(m_pDevice, *albedoImage[0]->GetImageFormat(), *normalImage[0]->GetImageFormat(), *metalRoughImage[0]->GetImageFormat(), FindDepthFormat());
 		m_pDepthRenderPass = new RenderPass(m_pDevice, FindDepthFormat());
 		m_pRenderPass = new RenderPass(m_pDevice, m_pSwapchain->GetSwapChainImageFormat(), FindDepthFormat(), true);
     }
@@ -270,49 +270,95 @@ private:
 		VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         
         // Loop over all meshes and create a texture for each one
-		for (Model* model : m_pOpaqueModels)
+		for (Model* pModel : m_pOpaqueModels)
 		{
-			if (model->GetDiffuseTexturePath().empty())
+			// Diffuse texture
+			if (pModel->GetDiffuseTexturePath().empty())
 			{
-				continue; // Skip models without a texture path
+                // Create a default texture for the model
+                pModel->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
 			}
-			// Create a texture for the model
-			model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
-            model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            else
+            {
+                // Create a texture for the model
+                pModel->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, pModel->GetDiffuseTexturePath()));
+                pModel->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
 
-            if (model->GetNormalTexturePath().empty())
+			// Normal texture
+            if (pModel->GetNormalTexturePath().empty())
             {
                 // Create a default normal for the model
-                model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
-                model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
-                continue;
+                pModel->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
             }
-            // Create a normal for the model
-            model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, model->GetNormalTexturePath()));
-            model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            else
+            {
+                // Create a normal for the model
+                pModel->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, pModel->GetNormalTexturePath()));
+                pModel->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
+
+			// MetalRough texture
+            if (pModel->GetMetalRoughTexturePath().empty())
+            {
+                // Create a default texture for the model
+                pModel->SetMetalRoughTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetMetalRoughTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
+            else
+            {
+                // Create a texture for the model
+                pModel->SetMetalRoughTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, pModel->GetMetalRoughTexturePath()));
+                pModel->GetMetalRoughTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
         }
 
         // Loop over all meshes and create a texture for each one
-        for (Model* model : m_pTransparentModels)
+        for (Model* pModel : m_pTransparentModels)
         {
-            if (model->GetDiffuseTexturePath().empty())
+            // Diffuse texture
+            if (pModel->GetDiffuseTexturePath().empty())
             {
-                continue; // Skip models without a texture path
+                // Create a default texture for the model
+                pModel->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
             }
-            // Create a texture for the model
-            model->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, model->GetDiffuseTexturePath()));
-            model->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            else
+            {
+                // Create a texture for the model
+                pModel->SetDiffuseTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, pModel->GetDiffuseTexturePath()));
+                pModel->GetDiffuseTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
 
-            if (model->GetNormalTexturePath().empty())
+            // Normal texture
+            if (pModel->GetNormalTexturePath().empty())
             {
                 // Create a default normal for the model
-                model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
-                model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
-                continue;
+                pModel->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
             }
-            // Create a normal for the model
-            model->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, model->GetNormalTexturePath()));
-            model->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            else
+            {
+                // Create a normal for the model
+                pModel->SetNormalTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), VK_FORMAT_R8G8B8A8_UNORM, tiling, usage, properties, pModel->GetNormalTexturePath()));
+                pModel->GetNormalTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
+
+            // MetalRough texture
+            if (pModel->GetMetalRoughTexturePath().empty())
+            {
+                // Create a default texture for the model
+                pModel->SetMetalRoughTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, "resources/models/white.png"));
+                pModel->GetMetalRoughTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
+            else
+            {
+                // Create a texture for the model
+                pModel->SetMetalRoughTexture(new Texture(m_pDevice, m_pCommandPool, m_pSwapchain->GetSwapchainExtent(), m_pSwapchain->GetSwapChainImageFormat(), tiling, usage, properties, pModel->GetMetalRoughTexturePath()));
+                pModel->GetMetalRoughTexture()->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+            }
         }
     }
 
@@ -320,15 +366,15 @@ private:
     {
 		ModelLoader modelLoader{};
 
-        for (Model* model : modelLoader.LoadModel(g_MODEL_PATH))
+        for (Model* pModel : modelLoader.LoadModel(g_MODEL_PATH))
         {
-            if (!model->IsTransparent())
+            if (!pModel->IsTransparent())
             {
-                m_pOpaqueModels.push_back(model);
+                m_pOpaqueModels.push_back(pModel);
             }
             else
             {
-                m_pTransparentModels.push_back(model);
+                m_pTransparentModels.push_back(pModel);
             }
         }
     }
@@ -345,33 +391,33 @@ private:
         uint32_t vertexOffset = 0;
         uint32_t indexOffset = 0;
 
-		for (Model* model : m_pOpaqueModels)
+		for (Model* pModel : m_pOpaqueModels)
 		{
-            model->SetVertexOffset(vertexOffset);
-            model->SetFirstIndex(indexOffset);
+            pModel->SetVertexOffset(vertexOffset);
+            pModel->SetFirstIndex(indexOffset);
 
-            vertexOffset += static_cast<uint32_t>(model->GetVertices().size());
-            indexOffset += static_cast<uint32_t>(model->GetIndices().size());
+            vertexOffset += static_cast<uint32_t>(pModel->GetVertices().size());
+            indexOffset += static_cast<uint32_t>(pModel->GetIndices().size());
 
-			bufferSize += sizeof(model->GetVertices()[0]) * model->GetVertices().size();
+			bufferSize += sizeof(pModel->GetVertices()[0]) * pModel->GetVertices().size();
 			
-			for (const Vertex& vertex : model->GetVertices())
+			for (const Vertex& vertex : pModel->GetVertices())
 			{
 				vertices.push_back(vertex);
 			}
 		}
 
-        for (Model* model : m_pTransparentModels)
+        for (Model* pModel : m_pTransparentModels)
         {
-            model->SetVertexOffset(vertexOffset);
-            model->SetFirstIndex(indexOffset);
+            pModel->SetVertexOffset(vertexOffset);
+            pModel->SetFirstIndex(indexOffset);
 
-            vertexOffset += static_cast<uint32_t>(model->GetVertices().size());
-            indexOffset += static_cast<uint32_t>(model->GetIndices().size());
+            vertexOffset += static_cast<uint32_t>(pModel->GetVertices().size());
+            indexOffset += static_cast<uint32_t>(pModel->GetIndices().size());
 
-            bufferSize += sizeof(model->GetVertices()[0]) * model->GetVertices().size();
+            bufferSize += sizeof(pModel->GetVertices()[0]) * pModel->GetVertices().size();
 
-            for (const Vertex& vertex : model->GetVertices())
+            for (const Vertex& vertex : pModel->GetVertices())
             {
                 vertices.push_back(vertex);
             }
@@ -388,21 +434,21 @@ private:
         // Add the size of the vertices of each model to the total buffer size
         VkDeviceSize bufferSize = 0;
         std::vector<uint32_t> indices;
-        for (Model* model : m_pOpaqueModels)
+        for (Model* pModel : m_pOpaqueModels)
         {
-            bufferSize += sizeof(model->GetIndices()[0]) * model->GetIndices().size();
+            bufferSize += sizeof(pModel->GetIndices()[0]) * pModel->GetIndices().size();
 
-            for (const uint32_t index : model->GetIndices())
+            for (const uint32_t index : pModel->GetIndices())
             {
                 indices.push_back(index);
             }
         }
 
-        for (Model* model : m_pTransparentModels)
+        for (Model* pModel : m_pTransparentModels)
         {
-            bufferSize += sizeof(model->GetIndices()[0]) * model->GetIndices().size();
+            bufferSize += sizeof(pModel->GetIndices()[0]) * pModel->GetIndices().size();
 
-            for (const uint32_t index : model->GetIndices())
+            for (const uint32_t index : pModel->GetIndices())
             {
                 indices.push_back(index);
             }
@@ -432,14 +478,14 @@ private:
     void CreateDescriptorSets()
     {
 		// Create descriptor sets for each model
-		for (Model* model : m_pOpaqueModels)
+		for (Model* pModel : m_pOpaqueModels)
 		{
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferPositionImages()[0]));
+            pModel->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, pModel, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferMetalRoughImages()[0]));
 		}
 
-        for (Model* model : m_pTransparentModels)
+        for (Model* pModel : m_pTransparentModels)
         {
-            model->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, model, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferPositionImages()[0]));
+            pModel->SetDescriptorSets(new DescriptorSets(g_MAX_FRAMES_IN_FLIGHT, m_pDevice, m_pDescriptorSetLayout->GetDescriptorSetLayout(), m_pDescriptorPool->GetDescriptorPool(), m_UniformBuffers, pModel, m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferMetalRoughImages()[0]));
         }
     }
 
@@ -566,15 +612,15 @@ private:
 
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-            for (Model* model : m_pOpaqueModels)
+            for (Model* pModel : m_pOpaqueModels)
             {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+                uint32_t indexCount = static_cast<uint32_t>(pModel->GetIndices().size());
+                uint32_t firstIndex = pModel->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(pModel->GetVertexOffset());
 
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     m_pDepthGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1,
-                    &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+                    &pModel->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
             }
@@ -604,13 +650,13 @@ private:
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
             // Draw all models
-            for (Model* model : m_pOpaqueModels)
+            for (Model* pModel : m_pOpaqueModels)
             {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+                uint32_t indexCount = static_cast<uint32_t>(pModel->GetIndices().size());
+                uint32_t firstIndex = pModel->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(pModel->GetVertexOffset());
 
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pDeferredGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pDeferredGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &pModel->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(
                     commandBuffer,
@@ -627,7 +673,7 @@ private:
 		// Transition images from color attachment to shader read only
         auto& albedoImage = m_pSwapchain->GetGBufferAlbedoImages();
         auto& normalImage = m_pSwapchain->GetGBufferNormalImages();
-        auto& positionImage = m_pSwapchain->GetGBufferPositionImages();
+        auto& metalRoughImage = m_pSwapchain->GetGBufferMetalRoughImages();
 
         // Transition G-buffer images to SHADER_READ_ONLY_OPTIMAL
         for (size_t i = 0; i < albedoImage.size(); ++i)
@@ -654,7 +700,7 @@ private:
 
             InsertImageMemoryBarrier(
                 commandBuffer,
-                *positionImage[i]->GetImage(),
+                *metalRoughImage[i]->GetImage(),
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                 VK_ACCESS_SHADER_READ_BIT,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -697,13 +743,13 @@ private:
             );
 
             // Draw all models
-            for (Model* model : m_pOpaqueModels)
+            for (Model* pModel : m_pOpaqueModels)
             {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+                uint32_t indexCount = static_cast<uint32_t>(pModel->GetIndices().size());
+                uint32_t firstIndex = pModel->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(pModel->GetVertexOffset());
 
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pCombineGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pCombineGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &pModel->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(
                     commandBuffer,
@@ -742,13 +788,13 @@ private:
             // TODO: Sort transparent models by distance from camera before drawing
 
             // Draw all models
-            for (Model* model : m_pTransparentModels)
+            for (Model* pModel : m_pTransparentModels)
             {
-                uint32_t indexCount = static_cast<uint32_t>(model->GetIndices().size());
-                uint32_t firstIndex = model->GetFirstIndex();
-                int32_t vertexOffset = static_cast<int32_t>(model->GetVertexOffset());
+                uint32_t indexCount = static_cast<uint32_t>(pModel->GetIndices().size());
+                uint32_t firstIndex = pModel->GetFirstIndex();
+                int32_t vertexOffset = static_cast<int32_t>(pModel->GetVertexOffset());
 
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pTransparentGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &model->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pTransparentGraphicsPipeline->GetPipelineLayout()->GetPipelineLayout(), 0, 1, &pModel->GetDescriptorSets()->GetDescriptorSets()[m_CurrentFrame], 0, nullptr);
 
                 vkCmdDrawIndexed(
                     commandBuffer,
@@ -787,7 +833,7 @@ private:
 
 			InsertImageMemoryBarrier(
 				commandBuffer,
-				*positionImage[i]->GetImage(),
+				*metalRoughImage[i]->GetImage(),
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -928,16 +974,16 @@ private:
 
     void Cleanup()
     {
-		for (Model* model : m_pOpaqueModels)
+		for (Model* pModel : m_pOpaqueModels)
 		{
-			delete model;
-            model = nullptr;
+			delete pModel;
+            pModel = nullptr;
 		}
 
-		for (Model* model : m_pTransparentModels)
+		for (Model* pModel : m_pTransparentModels)
 		{
-			delete model;
-			model = nullptr;
+			delete pModel;
+            pModel = nullptr;
 		}
 
         m_pSwapchain->CleanupSwapChain(m_pDepthImage);

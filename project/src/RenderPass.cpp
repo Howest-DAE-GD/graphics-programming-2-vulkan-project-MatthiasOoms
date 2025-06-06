@@ -19,12 +19,12 @@ RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat depthImageFormat)
     CreateDepthRenderPass(depthImageFormat);
 }
 
-RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat, VkFormat depthImageFormat)
+RenderPass::RenderPass(LogicalDevice* pDevice, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat metalRoughFormat, VkFormat depthImageFormat)
 	: m_pDevice(pDevice)
 	, m_RenderPass(VK_NULL_HANDLE)
 	, m_DepthWrite(false)
 {
-	CreateDeferredRenderPass(depthImageFormat, albedoImageFormat, normalImageFormat, positionImageFormat);
+	CreateDeferredRenderPass(depthImageFormat, albedoImageFormat, normalImageFormat, metalRoughFormat);
 }
 
 RenderPass::~RenderPass()
@@ -146,7 +146,7 @@ void RenderPass::CreateDepthRenderPass(VkFormat depthImageFormat)
     }
 }
 
-void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat positionImageFormat)
+void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat albedoImageFormat, VkFormat normalImageFormat, VkFormat metalRoughImageFormat)
 {
     VkAttachmentDescription albedoAttachment{};
     albedoAttachment.format = albedoImageFormat;
@@ -176,19 +176,19 @@ void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat al
     normalAttachmentRef.attachment = 1;
     normalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentDescription positionAttachment{};
-    positionAttachment.format = positionImageFormat;
-    positionAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    positionAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    positionAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    positionAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    positionAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    positionAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    positionAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkAttachmentDescription metalRoughAttachment{};
+    metalRoughAttachment.format = metalRoughImageFormat;
+    metalRoughAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    metalRoughAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    metalRoughAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    metalRoughAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    metalRoughAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    metalRoughAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    metalRoughAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference positionAttachmentRef{};
-	positionAttachmentRef.attachment = 2;
-    positionAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	VkAttachmentReference metalRoughAttachmentRef{};
+	metalRoughAttachmentRef.attachment = 2;
+    metalRoughAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = depthImageFormat;
@@ -204,7 +204,7 @@ void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat al
     depthAttachmentRef.attachment = 3;
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    std::array<VkAttachmentReference, 3> colorAttachmentRefs = { albedoAttachmentRef, normalAttachmentRef, positionAttachmentRef };
+    std::array<VkAttachmentReference, 3> colorAttachmentRefs = { albedoAttachmentRef, normalAttachmentRef, metalRoughAttachmentRef };
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -222,7 +222,7 @@ void RenderPass::CreateDeferredRenderPass(VkFormat depthImageFormat, VkFormat al
 	dependency.srcAccessMask = 0;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-    std::array<VkAttachmentDescription, 4> attachments = { albedoAttachment, normalAttachment, positionAttachment, depthAttachment };
+    std::array<VkAttachmentDescription, 4> attachments = { albedoAttachment, normalAttachment, metalRoughAttachment, depthAttachment };
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

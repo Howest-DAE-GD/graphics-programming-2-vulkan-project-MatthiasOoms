@@ -30,7 +30,7 @@ public:
 
 	std::vector<Texture*>& GetGBufferAlbedoImages() { return m_pGBufferAlbedoImages; }
 	std::vector<Texture*>& GetGBufferNormalImages() { return m_pGBufferNormalImages; }
-	std::vector<Texture*>& GetGBufferPositionImages() { return m_pGBufferPositionImages; }
+	std::vector<Texture*>& GetGBufferMetalRoughImages() { return m_pGBufferMetalRoughImages; }
 
 private:
 	void CreateImages(CommandPool* pCommandPool);
@@ -47,7 +47,7 @@ private:
 	// G-buffer attachments
 	std::vector<Texture*> m_pGBufferAlbedoImages;
 	std::vector<Texture*> m_pGBufferNormalImages;
-	std::vector<Texture*> m_pGBufferPositionImages;
+	std::vector<Texture*> m_pGBufferMetalRoughImages;
 
 	LogicalDevice* m_pDevice;
 	PhysicalDevice* m_pPhysicalDevice;

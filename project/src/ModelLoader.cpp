@@ -310,6 +310,30 @@ void ModelLoader::FillNormalTexture(const tinygltf::Model& model, const tinygltf
     normalTexture = path + img.uri;
 }
 
+void ModelLoader::FillMetalRoughTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& metalRoughTexture)
+{
+    const int& materialIndex = primitive.material;
+
+    if (materialIndex < 0)
+    {
+        return;
+    }
+
+    auto& mat = model.materials[materialIndex];
+    int texIdx = mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+    // If there is no normal texture
+    if (texIdx < 0)
+    {
+        return;
+    }
+
+    const tinygltf::Texture& text = model.textures[texIdx];
+    const tinygltf::Image& img = model.images[text.source];
+
+    metalRoughTexture = path + img.uri;
+}
+
 void ModelLoader::SetTransparent(Model& modelObj, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
 {
     const int& materialIndex = primitive.material;
@@ -376,6 +400,7 @@ void ModelLoader::ProcessNode(const tinygltf::Model& model, int nodeIndex, const
                 FillIndices(model, primitive, modelObj.GetIndices());
                 FillDiffuseTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetDiffuseTexturePath());
 				FillNormalTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetNormalTexturePath());
+				FillMetalRoughTexture(model, primitive, GetFolderPath(modelPath), modelObj.GetMetalRoughTexturePath());
                 SetTransparent(modelObj, model, primitive);
             }
         }

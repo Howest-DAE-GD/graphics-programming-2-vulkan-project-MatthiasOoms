@@ -22,6 +22,7 @@ private:
 	void FillIndices(const tinygltf::Model& gltfModel, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indices);
 	void FillDiffuseTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& diffuseTexture);
 	void FillNormalTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& normalTexture);
+	void FillMetalRoughTexture(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string&& path, std::string& metalRoughTexture);
 	void SetTransparent(Model& modelObj, const tinygltf::Model& model, const tinygltf::Primitive& primitive);
 
 	void ProcessNode(const tinygltf::Model& model, int nodeIdx, const glm::mat4& parentTransform, std::vector<Model*>& models, const std::string& modelPath);

@@ -119,7 +119,7 @@ void Swapchain::CleanupSwapChain(Image* pImage)
         delete image;
     }
 
-    for (Texture* image : m_pGBufferPositionImages)
+    for (Texture* image : m_pGBufferMetalRoughImages)
     {
         delete image;
     }
@@ -212,9 +212,9 @@ void Swapchain::CreateDeferredFramebuffers(VkRenderPass renderPass, VkImageView 
     {
 		VkImageView albedoImageView = *m_pGBufferAlbedoImages[i]->GetImageView();
 		VkImageView normalImageView = *m_pGBufferNormalImages[i]->GetImageView();
-		VkImageView positionImageView = *m_pGBufferPositionImages[i]->GetImageView();
+		VkImageView metalRoughImageView = *m_pGBufferMetalRoughImages[i]->GetImageView();
 
-        std::array<VkImageView, 4> attachments = { albedoImageView, normalImageView, positionImageView, depthImageView };
+        std::array<VkImageView, 4> attachments = { albedoImageView, normalImageView, metalRoughImageView, depthImageView };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -238,13 +238,13 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
 
     VkFormat albedoFormat = VK_FORMAT_R8G8B8A8_SRGB;
     VkFormat normalFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    VkFormat positionFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat metalRoughFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
     size_t count = m_SwapchainImages.size();
 
     m_pGBufferAlbedoImages.resize(count);
     m_pGBufferNormalImages.resize(count);
-    m_pGBufferPositionImages.resize(count);
+    m_pGBufferMetalRoughImages.resize(count);
 
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
     VkImageUsageFlagBits usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -277,8 +277,8 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
         );
         m_pGBufferNormalImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
 
-        m_pGBufferPositionImages[i] = new Texture(
-            m_pDevice, pCommandPool, extent, positionFormat,
+        m_pGBufferMetalRoughImages[i] = new Texture(
+            m_pDevice, pCommandPool, extent, metalRoughFormat,
             tiling,
             usage,
             properties,
@@ -286,6 +286,6 @@ void Swapchain::CreateImages(CommandPool* pCommandPool)
 			oldLayout,
 			newLayout
         );
-        m_pGBufferPositionImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
+        m_pGBufferMetalRoughImages[i]->CreateSampler(m_pPhysicalDevice->GetVkPhysicalDevice());
     }
 }

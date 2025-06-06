@@ -8,9 +8,9 @@ layout(location = 0) in vec2 fragUV;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 3) uniform sampler2D gAlbedo;
-layout(binding = 4) uniform sampler2D gNormal;
-layout(binding = 5) uniform sampler2D gPosition;
+layout(binding = 4) uniform sampler2D gAlbedo;
+layout(binding = 5) uniform sampler2D gNormal;
+layout(binding = 6) uniform sampler2D gMetalRough;
 
 void main()
 {

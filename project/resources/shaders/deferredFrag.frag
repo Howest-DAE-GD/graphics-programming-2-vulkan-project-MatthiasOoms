@@ -8,10 +8,11 @@ layout(location = 4) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outAlbedo;
 layout(location = 1) out vec4 outNormal;
-layout(location = 2) out vec4 outPosition;
+layout(location = 2) out vec4 outMetalRough;
 
 layout(binding = 1) uniform sampler2D texSampler;
 layout(binding = 2) uniform sampler2D normalSampler;
+layout(binding = 3) uniform sampler2D metalRoughSampler;
 
 void main()
 {
@@ -26,5 +27,5 @@ void main()
 
     outNormal = vec4(worldNormal * 0.5 + 0.5, 1.0);
     outAlbedo = texture(texSampler, fragTexCoord);
-    outPosition = vec4(fragPosition, 1.0);
+    outMetalRough = texture(metalRoughSampler, fragTexCoord);
 }
