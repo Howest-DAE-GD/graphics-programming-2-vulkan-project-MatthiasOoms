@@ -13,8 +13,6 @@ layout(location = 2) in vec4 inTangent;
 layout(location = 3) in vec3 inColor;
 layout(location = 4) in vec2 inTexCoord;
 
-layout(location = 0) out vec2 fragUV;
-
 void main()
 {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);

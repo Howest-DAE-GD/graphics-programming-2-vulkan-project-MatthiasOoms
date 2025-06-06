@@ -31,7 +31,8 @@ struct SwapChainSupportDetails
 
 struct PushConstants
 {
-    glm::vec2 screenSize;
+    glm::vec4 screenSize;
+	glm::vec4 cameraForward;
 };
 
 

@@ -12,7 +12,8 @@ class DescriptorSets
 public:
 	DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, VkDescriptorSetLayout* descriptorSetLayout, VkDescriptorPool* descriptorPool, std::vector<Buffer*> uniformBuffers, Model* pModel, Texture* pAlbedoImage, Texture* pNormalImage, Texture* pPosImage);
 	~DescriptorSets();
-	std::vector<VkDescriptorSet> GetDescriptorSets() const { return m_DescriptorSets; }
+	std::vector<VkDescriptorSet>& GetDescriptorSets() { return m_DescriptorSets; }
+	void UpdateDescriptorSets(Texture* pAlbedoImage, Texture* pNormalImage, Texture* pMetalRoughImage);
 
 private:
 	LogicalDevice* m_pDevice;

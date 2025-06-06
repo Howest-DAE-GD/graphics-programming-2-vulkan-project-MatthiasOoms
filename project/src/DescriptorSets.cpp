@@ -123,3 +123,53 @@ DescriptorSets::DescriptorSets(int maxFramesInFlight, LogicalDevice* pDevice, Vk
 DescriptorSets::~DescriptorSets()
 {
 }
+
+void DescriptorSets::UpdateDescriptorSets(Texture* pAlbedoImage, Texture* pNormalImage, Texture* pMetalRoughImage)
+{
+	for (size_t i{}; i < m_DescriptorSets.size(); ++i)
+	{
+		// Update albedo, normal and metalRough textures
+		VkDescriptorImageInfo albedoInfo{};
+		albedoInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		albedoInfo.imageView = *pAlbedoImage->GetImageView();
+		albedoInfo.sampler = *pAlbedoImage->GetSampler();
+
+		VkDescriptorImageInfo normalInfo{};
+		normalInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normalInfo.imageView = *pNormalImage->GetImageView();
+		normalInfo.sampler = *pNormalImage->GetSampler();
+
+		VkDescriptorImageInfo metalRoughInfo{};
+		metalRoughInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		metalRoughInfo.imageView = *pMetalRoughImage->GetImageView();
+		metalRoughInfo.sampler = *pMetalRoughImage->GetSampler();
+
+		std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_DescriptorSets[i];
+		descriptorWrites[0].dstBinding = 4;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pImageInfo = &albedoInfo;
+
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_DescriptorSets[i];
+		descriptorWrites[1].dstBinding = 5;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &normalInfo;
+
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = m_DescriptorSets[i];
+		descriptorWrites[2].dstBinding = 6;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pImageInfo = &metalRoughInfo;
+
+		vkUpdateDescriptorSets(m_pDevice->GetVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	}
+}

@@ -535,9 +535,18 @@ private:
         CreateSwapChain();
         CreateImageViews();
 		CreateDepthImage();
-        m_pSwapchain->CreateFramebuffers(m_pRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
-		m_pSwapchain->CreateDepthFramebuffers(m_pDepthRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
-		m_pSwapchain->CreateDeferredFramebuffers(m_pDeferredRenderPass->GetRenderPass(), *m_pDepthImage->GetImageView());
+
+		CreateFrameBuffers();
+
+		// Update descriptor sets with new image views
+		for (Model* pModel : m_pOpaqueModels)
+		{
+			pModel->GetDescriptorSets()->UpdateDescriptorSets(m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferMetalRoughImages()[0]);
+		}
+		for (Model* pModel : m_pTransparentModels)
+		{
+			pModel->GetDescriptorSets()->UpdateDescriptorSets(m_pSwapchain->GetGBufferAlbedoImages()[0], m_pSwapchain->GetGBufferNormalImages()[0], m_pSwapchain->GetGBufferMetalRoughImages()[0]);
+		}
     }
 
     void CleanupSwapChain()
@@ -731,7 +740,7 @@ private:
 
             vkCmdBindIndexBuffer(commandBuffer, m_pIndexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-            PushConstants pc = { glm::vec2(swapChainExtent.width, swapChainExtent.height) };
+            PushConstants pc = { glm::vec4(swapChainExtent.width, swapChainExtent.height, 0, 0), glm::vec4(m_pCamera->forward, 0) };
 
             vkCmdPushConstants(
                 commandBuffer,
