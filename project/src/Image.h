@@ -18,6 +18,7 @@ public:
 	virtual VkFormat* GetImageFormat() { return &m_ImageFormat; }
 
 	virtual void TransitionImageLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	virtual void TransitionImageLayout(VkCommandBuffer commandBuffer, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 protected:
 	LogicalDevice* m_pDevice;
